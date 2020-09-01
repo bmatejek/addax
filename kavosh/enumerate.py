@@ -47,7 +47,7 @@ def EnumerateVertex(G, u, S, rem, i, visited, subgraphs):
         for index in range(i):
             enumerated_subgraph = enumerated_subgraph.union(S[index])
 
-        subgraphs.append(sorted(enumerated_subgraph))
+        subgraphs.append(tuple(sorted(enumerated_subgraph)))
 
         return
 
