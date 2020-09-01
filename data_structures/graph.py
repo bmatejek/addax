@@ -72,6 +72,11 @@ class Graph(object):
 
 
 
+    def NNodes(self):
+        return len(self.nodes)
+
+
+
     def EdgesAdjacentToKthNode(self, k):
         return self.adjacent_edges[k]
 
