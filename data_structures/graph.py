@@ -9,21 +9,17 @@ class Graph(object):
         self.outgoing_directed_edges = {}
         self.ingoing_directed_edges = {}
 
+        # create adjacency lists for all nodes
+        for node in self.nodes:
+            self.adjacent_edges[node] = set()
+            self.outgoing_directed_edges[node] = set()
+            self.ingoing_directed_edges[node] = set()
+
         # edges correspond to a tuple
         for (node_one, node_two) in edges:
             # make sure that both nodes exist in the nodes list
             assert (node_one in self.nodes)
             assert (node_two in self.nodes)
-
-            # create new dictionary entries if these nodes have not yet been seen
-            if not node_one in self.adjacent_edges:
-                self.adjacent_edges[node_one] = set()
-                self.outgoing_directed_edges[node_one] = set()
-                self.ingoing_directed_edges[node_one] = set()
-            if not node_two in self.adjacent_edges:
-                self.adjacent_edges[node_two] = set()
-                self.outgoing_directed_edges[node_two] = set()
-                self.ingoing_directed_edges[node_two] = set()
 
             # add the opposite node to the adjacency lists
             self.adjacent_edges[node_one].add(node_two)
@@ -47,23 +43,8 @@ class Graph(object):
 
 
 
-    def PruneGraph(self, min_node):
-        """
-        Prune the graph so that the minimum label for this graph is min_node.
-        Returns a new graph object.
-        """
-        pruned_nodes = []
-        pruned_edges = []
-
-        for node in self.nodes:
-            if node < min_node: continue
-            pruned_nodes.append(node)
-
-        for (node_one, node_two) in self.edges:
-            if node_one < min_node or node_two < min_node: continue
-            pruned_edges.append((node_one, node_two))
-
-        return Graph(pruned_nodes, pruned_edges, self.directed)
+    def NEdges(self):
+        return len(self.edges)
 
 
 
