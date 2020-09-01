@@ -1,5 +1,5 @@
-class Graph:
-    def self(__init__, nodes, edges, directed):
+class Graph(object):
+    def __init__(self, nodes, edges, directed):
         # for directed graphs nodes (node_one, node_two) in edges correspond to an edge
         # from node one to node two
         self.nodes = sorted(nodes)
@@ -16,11 +16,11 @@ class Graph:
             assert (node_two in self.nodes)
 
             # create new dictionary entries if these nodes have not yet been seen
-            if not node_one in adjacent_edges:
+            if not node_one in self.adjacent_edges:
                 self.adjacent_edges[node_one] = set()
                 self.outgoing_directed_edges[node_one] = set()
                 self.ingoing_directed_edges[node_one] = set()
-            if not node_two in adjacent_edges:
+            if not node_two in self.adjacent_edges:
                 self.adjacent_edges[node_two] = set()
                 self.outgoing_directed_edges[node_two] = set()
                 self.ingoing_directed_edges[node_two] = set()
