@@ -1,42 +1,103 @@
 import sys
+import time
+import itertools
 
 
 
-def GenerateCompositions(N):
-    # We generate all compositions using the following algorithm:
-    # Write 1 ? 1 ? 1 ? ... ? 1 where there are N - 1 question marks.
-    # Each question mark is either a plus sign, or a comma
-    # Summing all 1s inbetween commas produces a composition
-    # Iterating over all combinations of commas and plus signs gives the
-    # complete set of unique combinations. We iterate over all 2 ** (N - 1)
-    # numbers, write those numbers in binary, with 1s representing commas
-    # and 0s representing plus signs.
+def Validate(G, parents, u, visited):
+    """
+    G: graph
+    parents: selected vertices of last layer
+    u: root vertex
+    visited: a list of nodes already visited
 
-    # there are 2^(N - 1) total compositions
-    total_compositions = 2 ** (N - 1)
+    Returns a sorted list of valid vertices for the next level
+    """
+    # create a set of valid vertices at this level
+    valid_vertices = set()
 
-    for comp in range(total_compositions):
-        # start with empty components in the composition
-        components = []
+    # iterate over all the parents of this layer
+    for v in parents:
+        # iterate over all the neighbors of this parent
+        for w in G.EdgesAdjacentToKthNode(v):
+            # if the root vertex is less than the neighbor and the neighbor has not been visited
+            if u < w and not w in visited:
+                visited.add(w)
 
-        # the current value is one
-        current_value = 1
-        for i in range(N - 1):
-            # want to start with low order bits first
-            bit = (comp >> N - 2 - i) & 1
+                valid_vertices.add(w)
 
-            # if the bit is one, treat as a comma and reset the current value
-            if bit:
-                components.append(current_value)
-                current_value = 1
-            # if the bit is zero, treat as a plus sign and add the two values together
-            else:
-                current_value += 1
-
-        # append the remaining current value which has no comma at its end
-        components.append(current_value)
+    return sorted(list(valid_vertices))
 
 
 
-def EnumerateSubgraphs(graph):
-    pass
+def EnumerateVertex(G, u, S, rem, i, visited, subgraphs):
+    """
+    G: graph
+    u: root vertex
+    S: selection (S = {S_0, S_i, ... S_{k - 1}}) is an array of the set of all S_i
+    rem: number of remaining vertices to be selected
+    i: current depth of the tree
+    visited: a list of nodes already visited
+    """
+    # if there are no remaining vertices to add, subgraph size limit reached
+    if not rem:
+        # the set of vertices in S[0] to S[i - 1] contain the subgraph
+        # note that the sets in S[i] ... S[k] do not belong to the subgraph but a previous iteration
+        enumerated_subgraph = set()
+        for index in range(i):
+            enumerated_subgraph = enumerated_subgraph.union(S[index])
+
+        subgraphs.append(sorted(enumerated_subgraph))
+
+        return
+
+    # get the valid vertices from the other
+    valid_vertices = Validate(G, S[i - 1], u, visited)
+
+    # the max number of nodes for this layer is the minimum of the number of children or the remaining
+    n_i = min(len(valid_vertices), rem)
+
+    # iterate over the total number of possible nodes at this layer
+    for k_i in range(1, n_i + 1):
+        # get all combinations of k for the valid vertices
+        combinations = itertools.combinations(valid_vertices, k_i)
+
+        # try all different combinations for this size k
+        for combination in combinations:
+            S[i] = set(combination)
+
+            # enumerate the vertices from
+            EnumerateVertex(G, u, S, rem - k_i, i + 1, visited, subgraphs)
+
+    # remove all of the valid vertices from the list of visited
+    for v in valid_vertices:
+        visited.remove(v)
+
+
+
+def EnumerateSubgraphsSequentially(G, k):
+    """
+    G: graph
+    k: motif size
+    """
+    nodes = G.nodes
+
+    subgraphs = []
+
+    # iterate over all nodes
+    for u in nodes:
+        # keep track globally (through parameter passing) of the vertices visited in enumeration
+        visited = set()
+
+        visited.add(u)
+
+        # create the selection (first layer only has the root)
+        S = {}
+        S[0] = set()
+        S[0].add(u)
+
+        EnumerateVertex(G, u, S, k - 1, 1, visited, subgraphs)
+
+        visited.remove(u)
+
+    return subgraphs
