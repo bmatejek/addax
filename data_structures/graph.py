@@ -151,10 +151,10 @@ class Graph(object):
             """
             # for directed graphs need to concatenate both the incoming and outgoing directions
             if self.graph.directed:
-                return IncomingNeighbors(self).union(OutgoingNeighbors(self))
+                return self.IncomingNeighbors().union(self.OutgoingNeighbors())
             # for undirected graphs incoming_edges and outgoing_edges are identical
             else:
-                return IncomingNeighbors(self)
+                return self.IncomingNeighbors()
 
 
 
