@@ -19,7 +19,7 @@ def Validate(G, parents, u, visited):
     # iterate over all the parents of this layer
     for v in parents:
         # iterate over all the neighbors of this parent
-        for w in G.EdgesAdjacentToKthNode(v):
+        for w in G.vertices[v].Neighbors():
             # if the root vertex is less than the neighbor and the neighbor has not been visited
             if u < w and not w in visited:
                 visited.add(w)
@@ -75,29 +75,49 @@ def EnumerateVertex(G, u, S, rem, i, visited, subgraphs):
 
 
 
+def EnumerateSubgraphsFromNode(G, k, u):
+    """
+    G: graph
+    k: motif size
+    u: node index
+    """
+    # make sure this node appears in the graph
+    assert (u in G.vertices.keys())
+
+    # keep track of all the visited subgraphs
+    subgraphs = []
+
+    # keep track globally (through parameter passing) the vertices visited at higher enumeration steps
+    visited = set()
+
+    # add the root node to the visited set
+    visited.add(u)
+
+    # create the selection (first layer only ever has the root node)
+    S = {}
+    S[0] = set()
+    S[0].add(u)
+
+    EnumerateVertex(G, u, S, k - 1, 1, visited, subgraphs)
+
+    # remove the root node from visited (should be the only remaining node)
+    visited.remove(u)
+    assert (not len(visited))
+
+    # return the subgraphs found
+    return subgraphs
+
+
+
 def EnumerateSubgraphsSequentially(G, k):
     """
     G: graph
     k: motif size
     """
-    nodes = G.nodes
-
     subgraphs = []
 
     # iterate over all nodes
-    for u in nodes:
-        # keep track globally (through parameter passing) of the vertices visited in enumeration
-        visited = set()
-
-        visited.add(u)
-
-        # create the selection (first layer only has the root)
-        S = {}
-        S[0] = set()
-        S[0].add(u)
-
-        EnumerateVertex(G, u, S, k - 1, 1, visited, subgraphs)
-
-        visited.remove(u)
+    for u in G.vertices.keys():
+        subgraphs += EnumerateSubgraphsFromNode(G, k, u)
 
     return subgraphs

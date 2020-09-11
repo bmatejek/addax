@@ -1,8 +1,45 @@
+class UnionFindElement:
+    def __init__(self, label):
+        self.label = label
+        self.parent = self
+        self.rank = 0
+
+    def Label(self):
+        return self.label
+
+    def Parent(self):
+        return self.parent
+
+    def Rank(self):
+        return self.rank
+
+def Find(element):
+    if (element.parent != element):
+        element.parent = Find(element.parent)
+    return element.parent
+
+def Union(element_one, element_two):
+    root_one = Find(element_one)
+    root_two = Find(element_two)
+
+    if (root_one == root_two): return
+
+    if (root_one.rank < root_two.rank):
+        root_one.parent = root_two
+    elif (root_one.rank > root_two.rank):
+        root_two.parent = root_one
+    else:
+        root_two.parent = root_one
+        root_one.rank = root_one.rank + 1
+
+
+
+
+
 import itertools
 
 
 
-from addax.data_structures.unionfind import UnionFindElement, Find, Union
 from addax.kavosh.enumerate import EnumerateSubgraphsSequentially
 from addax.utilities.dataIO import ReadGraph
 
@@ -17,7 +54,7 @@ def TestSubgraphEnumeration(filename):
 
     # read the graph and number of nodes
     graph = ReadGraph(filename)
-    nodes = graph.nodes
+    nodes = graph.vertices
     nnodes = len(nodes)
 
     # consider ks from 2 to the number of nodes
@@ -43,7 +80,7 @@ def TestSubgraphEnumeration(filename):
 
             # connect nodes that share edges within the subgraph
             for node in combination:
-                for neighbor_node in graph.EdgesAdjacentToKthNode(node):
+                for neighbor_node in graph.vertices[node].Neighbors():
                     # do not consider edges that leave the combination subgraph
                     if not neighbor_node in combination: continue
 
