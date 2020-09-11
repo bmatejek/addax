@@ -6,50 +6,51 @@ from addax.data_structures.graph import Graph
 
 
 
-def ReadGraph(filename):
-    # create empty arrays for nodes, edges, and directed orientation
-    nodes = []
-    edges = []
-    directed = False
+def ReadGraph(input_filename):
+    """
+    Read a graph data structure from disk
+    @param input_filename: the filename where the graph data is stored
+    """
+    with open(input_filename, 'rb') as fd:
+        # read the basic attributes for the graph
+        nvertices, nedges, directed, = struct.unpack('qq?', fd.read(17))
 
-    with open(filename, 'rb') as fd:
-        # read all of the nodes
-        nnodes, = struct.unpack('q', fd.read(8))
-        for _ in range(nnodes):
-            node, = struct.unpack('q', fd.read(8))
-            nodes.append(node)
+        graph = Graph(directed)
 
-        # read all of the edge tuples
-        nedges, = struct.unpack('q', fd.read(8))
+        # read all the vertices and add them to the graph
+        for _ in range(nvertices):
+            index, community, = struct.unpack('qq', fd.read(16))
+
+            graph.AddVertex(index, community)
+
+        # read all of the edges and add them to the graph
         for _ in range(nedges):
-            node_one, node_two,  = struct.unpack('qq', fd.read(16))
-            edges.append((node_one, node_two))
+            source_index, destination_index, weight, = struct.unpack('qqd', fd.read(24))
 
-        directed, = struct.unpack('q', fd.read(8))
+            graph.AddEdge(source_index, destination_index, weight)
 
-    graph = Graph(nodes, edges, directed)
-
-    return graph
+        return graph
 
 
 
-def WriteGraph(graph, filename):
-    nodes = graph.nodes
-    edges = graph.edges
-    directed = graph.directed
+def WriteGraph(graph, output_filename):
+    """
+    Write a graph to disk for later I/O access
+    @param graph: the graph data structure to save to disk
+    @param output_filename: the location to save the graph data structure 
+    """
+    with open(output_filename, 'wb') as fd:
+        # write the basic attributes for the graph to disk
+        nvertices = graph.NVertices()
+        nedges = graph.NEdges()
+        directed = graph.directed
 
-    nnodes = len(nodes)
-    nedges = len(edges)
+        fd.write(struct.pack('qq?', nvertices, nedges, directed))
 
-    with open(filename, 'wb') as fd:
-        # write all of the nodes
-        fd.write(struct.pack('q', nnodes))
-        fd.write(struct.pack('%sq' % nnodes, *nodes))
+        # write all of the vertices and their attributes
+        for vertex in graph.vertices.values():
+            fd.write(struct.pack('qq', vertex.index, vertex.community))
 
-        # write all of the edge tuples
-        fd.write(struct.pack('q', nedges))
-        for (node_one, node_two) in edges:
-            fd.write(struct.pack('qq', node_one, node_two))
-
-        # write the directed orientation
-        fd.write(struct.pack('q', directed))
+        # write all of the edges and their attributes
+        for edge in graph.edges:
+            fd.write(struct.pack('qqd', edge.source_index, edge.destination_index, edge.weight))

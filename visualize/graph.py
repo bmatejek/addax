@@ -3,28 +3,28 @@ import networkx as nx
 
 
 def VisualizeGraph(graph, output_filename):
-    nodes = graph.nodes
-    edges = graph.edges
-    directed = graph.directed
-
-    if directed:
+    """
+    Visualize the graph using networkx and output the result in a .dot file
+    @param graph: the graph data structure to visualize
+    @param output_filename: the file to save the visualized results
+    """
+    # different visualizations for directed and undirected graphs
+    if graph.directed:
         viz_graph = nx.DiGraph()
     else:
         viz_graph = nx.Graph()
 
-    node_mapping = {}
-    for index, node in enumerate(nodes):
-        viz_graph.add_node(index, label=str(node))
+    # iterate over the keys for the ids
+    for index in graph.vertices.keys():
+        viz_graph.add_node(index)
 
-        # create a mapping from the node number to the index
-        node_mapping[node] = index
+    # iterate over all edges in the graph
+    for edge in graph.edges:
+        # get the source and destination for each edge in the graph
+        viz_graph.add_edge(edge.source_index, edge.destination_index)
 
-    for (node_one, node_two) in edges:
-        node_one_index = node_mapping[node_one]
-        node_two_index = node_mapping[node_two]
-
-        viz_graph.add_edge(node_one_index, node_two_index)
-
+    # create the graph drawing structue
     A = nx.nx_agraph.to_agraph(viz_graph)
     A.layout(prog='dot')
+
     A.draw(output_filename)
