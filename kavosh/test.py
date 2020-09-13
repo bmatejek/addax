@@ -1,3 +1,4 @@
+import time
 import itertools
 
 
@@ -16,46 +17,67 @@ def TestSubgraphEnumeration(filename):
     @param filename: input file to enumerate all subgraphs via Kavosh and a brute force strategy.
     """
 
-    # read the graph and number of nodes
+    # read the graph into memory and get the vertex indices and the number of vertices
     graph = ReadGraph(filename)
-    nodes = graph.vertices
-    nnodes = len(nodes)
+    vertices = graph.vertices
+    nvertices = graph.NVertices()
 
-    # consider ks from 2 to the number of nodes
-    ks = range(2, nnodes)
+    # consider ks from 2 to the number of vertices
+    ks = range(2, nvertices)
 
+    kavosh_total_time = 0
+    brute_force_total_time = 0
+
+    # iterate over all considered motif sizes
     for k in ks:
+        kavosh_time = time.time()
+
+        # create a set of subgraphs discovered by the kavosh enumeration strategy
         subgraphs = set()
 
+        # retrieve all subgraphs in the graph of size k
         for subgraph in EnumerateSubgraphsSequentially(graph, k):
             assert (not subgraph in subgraphs)
             subgraphs.add(subgraph)
 
+        kavosh_total_time += (time.time() - kavosh_time)
+
+        brute_force_time = time.time()
+
         # consider all combinations of subgraphs
-        nbrute_force_combinations = 0
-        for combination in itertools.combinations(nodes, k):
-            vertices = {}
+        nbrute_force_subgraphs = 0
+        for vertex_combination in itertools.combinations(vertices.keys(), k):
+            # create a union find data structure to see if these vertices are connected in the subgraph
+            union_find_elements = {}
+            for vertex in vertex_combination:
+                # create a union find element with this label
+                union_find_elements[vertex] = UnionFindElement(vertex)
 
-            # create a union find element for all nodes
-            for node in combination:
-                vertices[node] = UnionFindElement(node)
+            # connect vertices that share edges within the subgraph
+            for vertex in vertex_combination:
+                for neighbor_vertex in graph.vertices[vertex].Neighbors():
+                    # do not consider any edges that remain outside the considered subgraph
+                    if not neighbor_vertex in vertex_combination: continue
 
-            # connect nodes that share edges within the subgraph
-            for node in combination:
-                for neighbor_node in graph.vertices[node].Neighbors():
-                    # do not consider edges that leave the combination subgraph
-                    if not neighbor_node in combination: continue
+                    # link together the vertices that share an edge
+                    Union(union_find_elements[vertex], union_find_elements[neighbor_vertex])
 
-                    Union(vertices[node], vertices[neighbor_node])
+            # if all vertcies share the same parent, they belong to the same tree and the subgraph is valid
+            union_find_parents = set()
+            for vertex in vertex_combination:
+                parent = Find(union_find_elements[vertex])
+                union_find_parents.add(parent)
 
-            # get the parent nodes of the set of vertices
-            parent_nodes = set()
-            for node in combination:
-                parent = Find(vertices[node])
-                parent_nodes.add(parent.label)
+            # if there is not one parent, the set of vertices is not connected
+            if not len(union_find_parents) == 1: continue
 
             # this is only a valid subgraph is there is one parent
-            if len(parent_nodes) == 1:
-                nbrute_force_combinations += 1
+            nbrute_force_subgraphs += 1
 
-        assert (len(subgraphs) == nbrute_force_combinations)
+        brute_force_total_time += (time.time() - brute_force_time)
+
+        assert (len(subgraphs) == nbrute_force_subgraphs)
+
+    print ('Verified {}'.format(filename))
+    print ('  Kavosh Enumeration Time: {:0.2f} seconds'.format(kavosh_total_time))
+    print ('  Brute Force Enumeration Time: {:0.2f} seconds'.format(brute_force_total_time))
