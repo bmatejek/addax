@@ -3,6 +3,7 @@ class Graph(object):
         """
         Graph class defines the basic graph structure for addax used for clustering commmunities, motif discovery,
         and generating random examples
+        
         @param directed: indicates if the graph is directed or undirected
         """
         self.directed = directed
@@ -15,6 +16,7 @@ class Graph(object):
     def AddVertex(self, index, community = -1):
         """
         Add a vertex to the graph
+
         @param index: the index for the vertex
         @param community: the community that the vertex belongs to (default = -1)
         """
@@ -28,6 +30,7 @@ class Graph(object):
     def AddEdge(self, source_index, destination_index, weight = 1):
         """
         Add an edge to the graph
+
         @param source_index: the integer of the source index in the graph
         @param destination_index: the integer of the destination index in the graph
         @param weight: the weight of this edge where higher values indicate greater strength (default = 1)
@@ -86,6 +89,7 @@ class Graph(object):
         def __init__(self, graph, index, community = -1):
             """
             Vertex class defines the vertices in a graph that are labeled by the index
+
             @param graph: the larger graph that contains this vertex
             @param index: the integer index that corresponds to this vertex
             @param community: the community that the vertex belongs to (default = -1)
@@ -104,6 +108,7 @@ class Graph(object):
         def AddEdge(self, edge):
             """
             Add this edge to the set of edges for this vertex and ensure no edge parallelism
+
             @param edge: the edge that connects this vertex to another
             """
             # ensure that this is a valid edge for this vertex
@@ -162,6 +167,7 @@ class Graph(object):
         def __init__(self, graph, source_index, destiantion_index, weight = 1):
             """
             Edge class defines the edges in a graph that connect the vertices
+
             @param graph: the larger graph that contains this edge
             @param source_index: the integer of the source index in the graph
             @param destination_index: the integer of the destination index in the graph

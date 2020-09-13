@@ -1,45 +1,8 @@
-class UnionFindElement:
-    def __init__(self, label):
-        self.label = label
-        self.parent = self
-        self.rank = 0
-
-    def Label(self):
-        return self.label
-
-    def Parent(self):
-        return self.parent
-
-    def Rank(self):
-        return self.rank
-
-def Find(element):
-    if (element.parent != element):
-        element.parent = Find(element.parent)
-    return element.parent
-
-def Union(element_one, element_two):
-    root_one = Find(element_one)
-    root_two = Find(element_two)
-
-    if (root_one == root_two): return
-
-    if (root_one.rank < root_two.rank):
-        root_one.parent = root_two
-    elif (root_one.rank > root_two.rank):
-        root_two.parent = root_one
-    else:
-        root_two.parent = root_one
-        root_one.rank = root_one.rank + 1
-
-
-
-
-
 import itertools
 
 
 
+from addax.data_structures.unionfind import UnionFindElement, Union, Find
 from addax.kavosh.enumerate import EnumerateSubgraphsSequentially
 from addax.utilities.dataIO import ReadGraph
 
@@ -47,9 +10,10 @@ from addax.utilities.dataIO import ReadGraph
 
 def TestSubgraphEnumeration(filename):
     """
-    filename: input file to both enumerate via Kavosh and brute force algorithm
+    Test the subgraph enumeration algorithm defined by the Kavosh algorithm and implemented in
+    addax.kavosh.enumerate.py
 
-    Test subgraph enumeration of the kavosh algorithm against brute force
+    @param filename: input file to enumerate all subgraphs via Kavosh and a brute force strategy.
     """
 
     # read the graph and number of nodes
@@ -61,13 +25,11 @@ def TestSubgraphEnumeration(filename):
     ks = range(2, nnodes)
 
     for k in ks:
-        subgraphs = EnumerateSubgraphsSequentially(graph, k)
+        subgraphs = set()
 
-        # make sure all subgraphs are unique
-        unique_subgraphs = set()
-        for subgraph in subgraphs:
-            assert (not subgraph in unique_subgraphs)
-            unique_subgraphs.add(subgraph)
+        for subgraph in EnumerateSubgraphsSequentially(graph, k):
+            assert (not subgraph in subgraphs)
+            subgraphs.add(subgraph)
 
         # consider all combinations of subgraphs
         nbrute_force_combinations = 0

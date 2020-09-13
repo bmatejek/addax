@@ -9,6 +9,7 @@ from addax.data_structures.graph import Graph
 def ReadGraph(input_filename):
     """
     Read a graph data structure from disk
+
     @param input_filename: the filename where the graph data is stored
     """
     with open(input_filename, 'rb') as fd:
@@ -36,8 +37,9 @@ def ReadGraph(input_filename):
 def WriteGraph(graph, output_filename):
     """
     Write a graph to disk for later I/O access
+    
     @param graph: the graph data structure to save to disk
-    @param output_filename: the location to save the graph data structure 
+    @param output_filename: the location to save the graph data structure
     """
     with open(output_filename, 'wb') as fd:
         # write the basic attributes for the graph to disk

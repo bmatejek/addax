@@ -5,6 +5,7 @@ import networkx as nx
 def VisualizeGraph(graph, output_filename):
     """
     Visualize the graph using networkx and output the result in a .dot file
+    
     @param graph: the graph data structure to visualize
     @param output_filename: the file to save the visualized results
     """

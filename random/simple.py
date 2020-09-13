@@ -11,6 +11,7 @@ from addax.visualize.graph import VisualizeGraph
 def GenerateSimpleRandomGraphs(N, nnodes, nedges, directed):
     """
     Generate a simple random graph that randomly chooses edges to connect vertices
+    
     @param N: the number of random graphs to generate
     @param nnodes: the number of nodes in the random graph
     @param nedges: the number of edges in the random graph
