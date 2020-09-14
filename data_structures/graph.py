@@ -3,7 +3,7 @@ class Graph(object):
         """
         Graph class defines the basic graph structure for addax used for clustering commmunities, motif discovery,
         and generating random examples
-        
+
         @param directed: indicates if the graph is directed or undirected
         """
         self.directed = directed
@@ -138,28 +138,28 @@ class Graph(object):
                     self.incoming_neighbors.add(edge.source_index)
                     self.outgoing_neighbors.add(edge.source_index)
 
-        def IncomingNeighbors(self):
+        def IncomingNeighborIndices(self):
             """
             Returns the neighbors with edges going from
             """
             return self.incoming_neighbors
 
-        def OutgoingNeighbors(self):
+        def OutgoingNeighborIndices(self):
             """
             Returns the neighbors with an edge from this vertex to that neighbor
             """
             return self.outgoing_neighbors
 
-        def Neighbors(self):
+        def NeighborIndices(self):
             """
             Return all neighbors from this vertex regardless of incoming and outgoing status
             """
             # for directed graphs need to concatenate both the incoming and outgoing directions
             if self.graph.directed:
-                return self.IncomingNeighbors().union(self.OutgoingNeighbors())
+                return self.IncomingNeighborIndices().union(self.OutgoingNeighborIndices())
             # for undirected graphs incoming_edges and outgoing_edges are identical
             else:
-                return self.IncomingNeighbors()
+                return self.IncomingNeighborIndices()
 
 
 

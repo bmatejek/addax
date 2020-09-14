@@ -22,7 +22,7 @@ def Validate(G, parents, u, visited):
     # iterate over all the parents of this layer
     for v in parents:
         # iterate over all the neighbors of this parent
-        for w in G.vertices[v].Neighbors():
+        for w in G.vertices[v].NeighborIndices():
             # if the root vertex is less than the neighbor and the neighbor has not been visited
             if u < w and not w in visited:
                 visited.add(w)

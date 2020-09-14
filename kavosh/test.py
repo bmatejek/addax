@@ -55,7 +55,7 @@ def TestSubgraphEnumeration(filename):
 
             # connect vertices that share edges within the subgraph
             for vertex in vertex_combination:
-                for neighbor_vertex in graph.vertices[vertex].Neighbors():
+                for neighbor_vertex in graph.vertices[vertex].NeighborIndices():
                     # do not consider any edges that remain outside the considered subgraph
                     if not neighbor_vertex in vertex_combination: continue
 
