@@ -18,6 +18,10 @@ plt.rcParams['font.family'] = 'Ubuntu'
 
 
 def AnalyzeCommunities():
+    """
+    Analyzes the neuron communities (regions) in the HemiBrain dataset
+    """
+
     neuron_filename = 'CSVs/HemiBrain/traced-neurons.csv'
 
     neurons = {}
