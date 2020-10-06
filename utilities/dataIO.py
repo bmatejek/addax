@@ -16,7 +16,11 @@ def ReadGraph(input_filename):
         # read the basic attributes for the graph
         nvertices, nedges, directed, = struct.unpack('qq?', fd.read(17))
 
-        graph = Graph(directed)
+        # read the prefix
+        prefix, = struct.unpack('128s', fd.read(128))
+        prefix = prefix.decode().strip('\0')
+
+        graph = Graph(prefix, directed)
 
         # read all the vertices and add them to the graph
         for _ in range(nvertices):
@@ -37,7 +41,7 @@ def ReadGraph(input_filename):
 def WriteGraph(graph, output_filename):
     """
     Write a graph to disk for later I/O access
-    
+
     @param graph: the graph data structure to save to disk
     @param output_filename: the location to save the graph data structure
     """
@@ -46,8 +50,10 @@ def WriteGraph(graph, output_filename):
         nvertices = graph.NVertices()
         nedges = graph.NEdges()
         directed = graph.directed
+        prefix = graph.prefix
 
         fd.write(struct.pack('qq?', nvertices, nedges, directed))
+        fd.write(struct.pack('128s', prefix.encode()))
 
         # write all of the vertices and their attributes
         for vertex in graph.vertices.values():

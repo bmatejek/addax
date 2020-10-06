@@ -88,7 +88,7 @@ def ConstructGraphFromHemiBrain():
         regions_to_communities[region] = index
 
     # construct a directed graph object
-    graph = Graph(directed = True)
+    graph = Graph('hemi-brain', directed = True)
 
     # add vertices with the communities
     for neuron in neurons.keys():

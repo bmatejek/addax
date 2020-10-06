@@ -11,13 +11,14 @@ import community as community_louvain
 
 
 class Graph(object):
-    def __init__(self, directed):
+    def __init__(self, prefix, directed):
         """
         Graph class defines the basic graph structure for addax used for clustering commmunities, motif discovery,
         and generating random examples
 
         @param directed: indicates if the graph is directed or undirected
         """
+        self.prefix = prefix 
         self.directed = directed
 
         # vertices is a mapping from the vertex index to the vertex object
