@@ -46,8 +46,8 @@ def GenerateSimpleRandomGraphs(N, nnodes, nedges, directed):
             graph.AddEdge(edge[0], edge[1])
 
         # write the simple graph to file
-        if directed: output_filename = 'random/simple/graphs/{}.graph'.format(prefix)
-        else: output_filename = 'random/simple/graphs/{}.graph'.format(prefix)
+        if directed: output_filename = 'random/simple/graphs/{}.graph.bz2'.format(prefix)
+        else: output_filename = 'random/simple/graphs/{}.graph.bz2'.format(prefix)
 
         WriteGraph(graph, output_filename)
 
@@ -108,5 +108,5 @@ def ConfigurationModelRandomGraphs(graph, ngraphs):
         output_directory = 'random/simple-configuration-model/graphs'
         if not os.path.exists(output_directory):
             os.makedirs(output_directory, exist_ok = True)
-        output_filename = '{}/{}.graph'.format(output_directory, random_graph.prefix)
+        output_filename = '{}/{}.graph.bz2'.format(output_directory, random_graph.prefix)
         WriteGraph(random_graph, output_filename)

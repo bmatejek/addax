@@ -63,7 +63,7 @@ def CompareCommunities(ground_truth_community, proposed_community):
 
 def EvaluateLouvainCommunities():
     # read the graph and louvain communities
-    graph = ReadGraph('graphs/hemi-brain.graph')
+    graph = ReadGraph('graphs/hemi-brain.graph.bz2')
     ground_truth_communities = graph.Communities()
 
     louvain_communities = ReadCommunities('communities/hemi-brain-louvain.dict')

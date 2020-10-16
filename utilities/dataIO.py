@@ -1,3 +1,4 @@
+import bz2
 import struct
 
 
@@ -12,29 +13,39 @@ def ReadGraph(input_filename):
 
     @param input_filename: the filename where the graph data is stored
     """
-    with open(input_filename, 'rb') as fd:
-        # read the basic attributes for the graph
-        nvertices, nedges, directed, = struct.unpack('qq?', fd.read(17))
+    assert (input_filename.endswith('.graph.bz2'))
 
-        # read the prefix
-        prefix, = struct.unpack('128s', fd.read(128))
-        prefix = prefix.decode().strip('\0')
+    data = bz2.decompress(open(input_filename, 'rb').read())
 
-        graph = Graph(prefix, directed)
+    byte_index = 0
 
-        # read all the vertices and add them to the graph
-        for _ in range(nvertices):
-            index, community, = struct.unpack('qq', fd.read(16))
+    # read the basic attributes for the graph
+    nvertices, nedges, directed, = struct.unpack('qq?', data[byte_index:byte_index + 17])
+    byte_index += 17
 
-            graph.AddVertex(index, community)
+    # read the prefix
+    prefix, = struct.unpack('128s', data[byte_index:byte_index + 128])
+    byte_index += 128
 
-        # read all of the edges and add them to the graph
-        for _ in range(nedges):
-            source_index, destination_index, weight, = struct.unpack('qqd', fd.read(24))
+    prefix = prefix.decode().strip('\0')
 
-            graph.AddEdge(source_index, destination_index, weight)
+    graph = Graph(prefix, directed)
 
-        return graph
+    # read all the vertices and add them to the graph
+    for _ in range(nvertices):
+        index, community, = struct.unpack('qq', data[byte_index:byte_index + 16])
+        byte_index += 16
+
+        graph.AddVertex(index, community)
+
+    # read all of the edges and add them to the graph
+    for _ in range(nedges):
+        source_index, destination_index, weight, = struct.unpack('qqd', data[byte_index:byte_index + 24])
+        byte_index += 24
+
+        graph.AddEdge(source_index, destination_index, weight)
+    
+    return graph
 
 
 
@@ -45,20 +56,37 @@ def WriteGraph(graph, output_filename):
     @param graph: the graph data structure to save to disk
     @param output_filename: the location to save the graph data structure
     """
+    assert (output_filename.endswith('.graph.bz2'))
+
+    # create a new compression object
+    compressor = bz2.BZ2Compressor()
+
+    # write the basic attributes for the graph to disk
+    nvertices = graph.NVertices()
+    nedges = graph.NEdges()
+    directed = graph.directed
+    prefix = graph.prefix
+
+    # create an empty byte array which we will concatenate later
+    compressed_graph = []
+
+    compressed_graph.append(compressor.compress(struct.pack('qq?', nvertices, nedges, directed)))
+    compressed_graph.append(compressor.compress(struct.pack('128s', prefix.encode())))
+
+    # write all of the vertices and their attributes
+    for vertex in graph.vertices.values():
+        compressed_graph.append(compressor.compress(struct.pack('qq', vertex.index, vertex.community)))
+
+    # write all of the edges and their attributes
+    for edge in graph.edges:
+        compressed_graph.append(compressor.compress(struct.pack('qqd', edge.source_index, edge.destination_index, edge.weight)))
+
+    # flush the data
+    compressed_graph.append(compressor.flush())
+
+    # convert the array into a binary string - faster than native implementation
+    compressed_graph = b''.join(compressed_graph)
+
+    # write the compressed string to file
     with open(output_filename, 'wb') as fd:
-        # write the basic attributes for the graph to disk
-        nvertices = graph.NVertices()
-        nedges = graph.NEdges()
-        directed = graph.directed
-        prefix = graph.prefix
-
-        fd.write(struct.pack('qq?', nvertices, nedges, directed))
-        fd.write(struct.pack('128s', prefix.encode()))
-
-        # write all of the vertices and their attributes
-        for vertex in graph.vertices.values():
-            fd.write(struct.pack('qq', vertex.index, vertex.community))
-
-        # write all of the edges and their attributes
-        for edge in graph.edges:
-            fd.write(struct.pack('qqd', edge.source_index, edge.destination_index, edge.weight))
+        fd.write(compressed_graph)

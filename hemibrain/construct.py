@@ -1,3 +1,4 @@
+import os
 import csv
 
 
@@ -99,7 +100,9 @@ def ConstructGraphFromHemiBrain():
         graph.AddEdge(pre_neuron_id, post_neuron_id, weight = edges[(pre_neuron_id, post_neuron_id)])
 
     # write the hemibrain graph to disk
-    output_filename = 'graphs/hemi-brain.graph'
+    if not os.path.exists('graphs'):
+        os.makedirs('graphs', exist_ok = True)
+    output_filename = 'graphs/hemi-brain.graph.bz2'
     WriteGraph(graph, output_filename)
 
     # write the condensed CSV neuron and edge files
