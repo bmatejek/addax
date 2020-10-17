@@ -1,4 +1,5 @@
 import os
+import time
 import random
 
 
@@ -59,16 +60,19 @@ def GenerateSimpleRandomGraphs(N, nnodes, nedges, directed):
 
 
 
-def ConfigurationModelRandomGraphs(graph, ngraphs):
+def SimpleConfigurationModelRandomGraphs(graph, ngraphs):
     """
-    Generate random graphs using a configuration model which guarantees the same degree distribution.
-    This simple method ignores all communities.
+    Generate random graphs using a configuration model which guarantees approximately
+    the same degree distribution. This simple method ignores all communities.
 
-    @param graph: the input graph to copy
+    @param graph: the input graph to emulate
     @param ngraphs: the number of random graphs to create
     """
     for graph_index in range(ngraphs):
-        # create the degree lists for the in and out
+        # print statistics
+        total_time = time.time()
+
+        # create the degree lists for the in and out half edges
         incoming_degree_list = []
         outgoing_degree_list = []
 
@@ -110,3 +114,15 @@ def ConfigurationModelRandomGraphs(graph, ngraphs):
             os.makedirs(output_directory, exist_ok = True)
         output_filename = '{}/{}.graph.bz2'.format(output_directory, random_graph.prefix)
         WriteGraph(random_graph, output_filename)
+
+        total_time = time.time() - total_time
+        print ('Generation time: {:0.2f} seconds'.format(total_time))
+
+        # write timing statistics to disk
+        timing_directory = 'timings/simple-configuration-models/'
+        if not os.path.exists(timing_directory):
+            os.makedirs(timing_directory, exist_ok = True)
+        timing_filename = '{}/{}.txt'.format(timing_directory, random_graph.prefix)
+
+        with open(timing_filename, 'w') as fd:
+            fd.write('Generation Time: {:0.2f} seconds\n'.format(total_time))
