@@ -1,4 +1,5 @@
 import bz2
+import pickle
 import struct
 
 
@@ -44,7 +45,7 @@ def ReadGraph(input_filename):
         byte_index += 24
 
         graph.AddEdge(source_index, destination_index, weight)
-    
+
     return graph
 
 
@@ -90,3 +91,26 @@ def WriteGraph(graph, output_filename):
     # write the compressed string to file
     with open(output_filename, 'wb') as fd:
         fd.write(compressed_graph)
+
+
+
+def PickleData(data, filename):
+    """
+    Pickle the data and write to disk
+
+    @param data: the data to pickle
+    @param filename: the location to save the pickled data
+    """
+    with open(filename, 'wb') as fd:
+        pickle.dump(data, fd)
+
+
+
+def ReadPickledData(filename):
+    """
+    Read pickled data from disk and return object
+
+    @param filename: the location of the saved pickled data
+    """
+    with open(filename, 'rb') as fd:
+        return pickle.load(fd)

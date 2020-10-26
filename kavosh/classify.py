@@ -1,9 +1,11 @@
+import sys
 import pynauty
 
 
 
 from addax.data_structures.graph import Graph
 from addax.kavosh.enumerate import EnumerateSubgraphsFromNode, EnumerateSubgraphsSequentially
+from addax.utilities.dataIO import PickleData, ReadPickledData
 from addax.visualize.graph import VisualizeGraph
 
 
@@ -123,6 +125,13 @@ def ClassifySubgraphsFromNode(G, k, u):
         else:
             certificates[certificate] += 1
 
+    # save the certificates to disk
+    output_directory = 'temp/{}'.format(G.prefix)
+    if not os.path.exists(output_directory):
+        os.makedirs(output_directory, exist_ok = True)
+    output_filename = '{}/motif-size-{:03d}-node-{:016d}-certificates.pickle'.format(output_directory, k, u)
+    PickleData(certificates, output_filename)
+
     return certificates
 
 
@@ -150,5 +159,58 @@ def ClassifySubgraphsSequentially(G, k):
             certificates[certificate] = 1
         else:
             certificates[certificate] += 1
+
+    # save the certificates to disk
+    output_directory = 'temp/{}'.format(G.prefix)
+    if not os.path.exists(output_directory):
+        os.makedirs(output_directory, exist_ok = True)
+    output_filename = '{}/motif-size-{:03d}-certificates.pickle'.format(output_directory, k)
+    PickleData(certificates, output_filename)
+
+    return certificates
+
+
+
+def CombineSubgraphCertificates(G, k):
+    """
+    Combine the generated certificates for all nodes in the graph G
+
+    @param G: graph
+    @param k: motif size
+
+    Returns a dictionary of certificates
+    """
+
+    certificates = {}
+
+    # get the input/output directory
+    directory = 'temp/{}'.format(G.prefix)
+    if not os.path.exists(directory):
+        sys.stderr.write('Failed to find any input certificates...\n')
+        sys.exit(-1)
+
+    for u in G.vertices.keys():
+        # make sure that the input file exists
+        input_filename = '{}/motif-size-{:03d}-node-{:016d}-certificates.pickle'.format(directory, k, u)
+        if not os.path.exists(input_filename):
+            sys.stderr.write('Missing certificates file: {}...\n'.format(input_filename))
+            sys.exit(-1)
+
+        # read the input certifiicates from disk
+        certificates_from_node = ReadPickledData(input_filename)
+
+        # add the certificates to the global array
+        for certificate in certificates_from_node:
+            if not certificate in certificates:
+                certificates[certificate] = certificates_from_node[certificate]
+            else:
+                certificates[certificate] += certificates_from_node[certificate]
+
+    # save the certificates to disk
+    output_directory = 'temp/{}'.format(G.prefix)
+    if not os.path.exists(output_directory):
+        os.makedirs(output_directory, exist_ok = True)
+    output_filename = '{}/motif-size-{:03d}-certificates.pickle'.format(output_directory, k)
+    PickleData(certificates, output_filename)
 
     return certificates
