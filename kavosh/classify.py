@@ -1,4 +1,6 @@
+import os
 import sys
+import time
 import pynauty
 
 
@@ -111,6 +113,9 @@ def ClassifySubgraphsFromNode(G, k, u):
     Returns a dictionary of certificates
     """
 
+    # start statistics
+    start_time = time.time()
+
     # create a dictionary for the certificates
     certificates = {}
 
@@ -132,6 +137,18 @@ def ClassifySubgraphsFromNode(G, k, u):
     output_filename = '{}/motif-size-{:03d}-node-{:016d}-certificates.pickle'.format(output_directory, k, u)
     PickleData(certificates, output_filename)
 
+    # print statistics
+    start_time = time.time() - start_time
+    print ('Classified subgraphs of size {} for node {} in {:0.2f} seconds'.format(k, u, start_time))
+
+    # save the timing to disk
+    output_timing_directory = 'temp/{}/timing'.format(G.prefix)
+    if not os.path.exists(output_timing_directory):
+        os.makedirs(output_timing_directory, exist_ok = True)
+    output_timing_filename = '{}/motif-size-{:03d}-node-{:016d}.txt'.format(output_timing_directory, k, u)
+    with open(output_timing_filename, 'w') as fd:
+        fd.write('Total Time: {:0.2f} seconds\n'.format(start_time))
+
     return certificates
 
 
@@ -145,6 +162,9 @@ def ClassifySubgraphsSequentially(G, k):
 
     Returns a dictionary of certificates
     """
+
+    # start statistics
+    start_time = time.time()
 
     # create a dictionary for the certificates
     certificates = {}
@@ -167,6 +187,18 @@ def ClassifySubgraphsSequentially(G, k):
     output_filename = '{}/motif-size-{:03d}-certificates.pickle'.format(output_directory, k)
     PickleData(certificates, output_filename)
 
+    # print statistics
+    start_time = time.time() - start_time
+    print ('Classified subgraphs of size {} in {:0.2f} seconds'.format(k, u, start_time))
+
+    # save the timing to disk
+    output_timing_directory = 'temp/{}/timing'.format(G.prefix)
+    if not os.path.exists(output_timing_directory):
+        os.makedirs(output_timing_directory, exist_ok = True)
+    output_timing_filename = '{}/motif-size-{:03d}.txt'.format(output_timing_directory, k)
+    with open(output_timing_filename, 'w') as fd:
+        fd.write('Total Time: {:0.2f} seconds\n'.format(start_time))
+
     return certificates
 
 
@@ -181,11 +213,18 @@ def CombineSubgraphCertificates(G, k):
     Returns a dictionary of certificates
     """
 
+    # start statistics
+    total_time = 0
+
     certificates = {}
 
     # get the input/output directory
     directory = 'temp/{}'.format(G.prefix)
     if not os.path.exists(directory):
+        sys.stderr.write('Failed to find any input certificates...\n')
+        sys.exit(-1)
+    timing_directory = 'temp/{}/timing'.format(G.prefix)
+    if not os.path.exists(timing_directory):
         sys.stderr.write('Failed to find any input certificates...\n')
         sys.exit(-1)
 
@@ -206,11 +245,29 @@ def CombineSubgraphCertificates(G, k):
             else:
                 certificates[certificate] += certificates_from_node[certificate]
 
+        # make sure that the input file exists
+        input_timing_filename = '{}/motif-size-{:03d}-node-{:016d}.txt'.format(timing_directory, k, u)
+        if not os.path.exists(input_timing_filename):
+            sys.stderr.write('Missing timing file: {}...\n'.format(input_filename))
+            sys.exit(-1)
+
+        # concatenate the total time needed
+        with open(input_timing_filename, 'r') as fd:
+            total_time += float(fd.readline().split()[2])
+
     # save the certificates to disk
     output_directory = 'temp/{}'.format(G.prefix)
     if not os.path.exists(output_directory):
         os.makedirs(output_directory, exist_ok = True)
     output_filename = '{}/motif-size-{:03d}-certificates.pickle'.format(output_directory, k)
     PickleData(certificates, output_filename)
+
+    # save the timing to disk
+    output_timing_directory = 'temp/{}/timing'.format(G.prefix)
+    if not os.path.exists(output_timing_directory):
+        os.makedirs(output_timing_directory, exist_ok = True)
+    output_timing_filename = '{}/motif-size-{:03d}.txt'.format(output_timing_directory, k)
+    with open(output_timing_filename, 'w') as fd:
+        fd.write('Total Time: {:0.2f} seconds\n'.format(total_time))
 
     return certificates
