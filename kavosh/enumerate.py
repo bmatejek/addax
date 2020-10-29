@@ -25,11 +25,13 @@ def Validate(G, parents, u, visited):
         for w in G.vertices[v].NeighborIndices():
             # if the root vertex is less than the neighbor and the neighbor has not been visited
             if u < w and not w in visited:
-                visited.add(w)
-
                 valid_vertices.add(w)
 
-    return sorted(list(valid_vertices))
+    # add all of the valid vertices to the visited set
+    # add here saves time as opposed to adding in the loop 
+    visited.update(valid_vertices)
+
+    return list(valid_vertices)
 
 
 
@@ -56,7 +58,7 @@ def EnumerateVertex(G, u, S, rem, i, visited):
             enumerated_subgraph = enumerated_subgraph.union(S[index])
 
         # return a sorted tuple for this subgraph
-        yield tuple(sorted(enumerated_subgraph))
+        yield tuple(enumerated_subgraph)
 
     # get the valid vertices from the other
     valid_vertices = Validate(G, S[i - 1], u, visited)

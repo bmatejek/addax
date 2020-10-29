@@ -39,9 +39,9 @@ def ClassifySubgraph(G, subgraph, k):
         adj_neighbors[index_one] = []
 
         # find all the neighbors to this vertex in the graph
-        for neighbor_index in G.vertices[vertex_index].OutgoingNeighborIndices():
-            # skip neighbors not in the subgraph
-            if not neighbor_index in vertex_mapping: continue
+        for neighbor_index in subgraph:
+            # skip if this pair does not have an edge from vertex_index to neighbor_index
+            if not (vertex_index, neighbor_index) in G.edge_set: continue
 
             # get the index between 0 and k - 1 for this vertex
             index_two = vertex_mapping[neighbor_index]
@@ -119,6 +119,8 @@ def ClassifySubgraphsFromNode(G, k, u):
     # create a dictionary for the certificates
     certificates = {}
 
+    nsubgraphs = 0
+
     # enumerate all subgraphs rooted at vertext u using the Kavosh method
     for subgraph in EnumerateSubgraphsFromNode(G, k, u):
         # get the classification for this subgraph
@@ -130,6 +132,8 @@ def ClassifySubgraphsFromNode(G, k, u):
         else:
             certificates[certificate] += 1
 
+        nsubgraphs += 1
+
     # save the certificates to disk
     output_directory = 'temp/{}'.format(G.prefix)
     if not os.path.exists(output_directory):
@@ -139,7 +143,7 @@ def ClassifySubgraphsFromNode(G, k, u):
 
     # print statistics
     start_time = time.time() - start_time
-    print ('Classified subgraphs of size {} for node {} in {:0.2f} seconds'.format(k, u, start_time))
+    print ('Classified {} subgraphs of size {} for node {} in {:0.2f} seconds'.format(nsubgraphs, k, u, start_time))
 
     # save the timing to disk
     output_timing_directory = 'temp/{}/timing'.format(G.prefix)

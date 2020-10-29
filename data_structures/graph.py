@@ -18,13 +18,15 @@ class Graph(object):
 
         @param directed: indicates if the graph is directed or undirected
         """
-        self.prefix = prefix 
+        self.prefix = prefix
         self.directed = directed
 
         # vertices is a mapping from the vertex index to the vertex object
         self.vertices = {}
         # edges is a list of edges with sources, destinations, and weights
         self.edges = []
+        # the edge set contains a list of (source, destination) indices
+        self.edge_set = set()
 
     def AddVertex(self, index, community = -1):
         """
@@ -64,6 +66,14 @@ class Graph(object):
         # create the edge and add it to the list of edges
         edge = self.Edge(self, source_index, destination_index, weight)
         self.edges.append(edge)
+
+        # add to the set of edges in the graph for easier look up
+        if self.directed:
+            self.edge_set.add((source_index, destination_index))
+        else:
+            # directed edges go in both directions
+            self.edge_set.add((source_index, destination_index))
+            self.edge_set.add((destination_index, source_index))
 
         # add the edge to both vertices
         self.vertices[source_index].AddEdge(edge)
@@ -148,9 +158,10 @@ class Graph(object):
             # extra instance variables keep track of the ingoing and outgoing edges from the vertex
             self.incoming_edges = []
             self.outgoing_edges = []
-            #
+            # keep track of incoming and outgoing neighbors
             self.incoming_neighbors = set()
             self.outgoing_neighbors = set()
+            self.neighbors = set()
 
         def AddEdge(self, edge):
             """
@@ -167,10 +178,12 @@ class Graph(object):
                     self.outgoing_edges.append(edge)
                     assert (not edge.destination_index in self.outgoing_neighbors)
                     self.outgoing_neighbors.add(edge.destination_index)
+                    self.neighbors.add(edge.destination_index)
                 else:
                     self.incoming_edges.append(edge)
                     assert (not edge.source_index in self.incoming_neighbors)
                     self.incoming_neighbors.add(edge.source_index)
+                    self.neighbors.add(edge.source_index)
             # if the graph is not directed, add the edge to both incoming and outgoing
             else:
                 self.incoming_edges.append(edge)
@@ -180,10 +193,12 @@ class Graph(object):
                     assert (not edge.destination_index in self.incoming_neighbors and not edge.destination_index in self.outgoing_neighbors)
                     self.incoming_neighbors.add(edge.destination_index)
                     self.outgoing_neighbors.add(edge.destination_index)
+                    self.neighbors.add(edge.destination_index)
                 else:
                     assert (not edge.source_index in self.incoming_neighbors and not edge.source_index in self.outgoing_neighbors)
                     self.incoming_neighbors.add(edge.source_index)
                     self.outgoing_neighbors.add(edge.source_index)
+                    self.neighbors.add(edge.source_index)
 
         def IncomingNeighborIndices(self):
             """
@@ -201,13 +216,7 @@ class Graph(object):
             """
             Return all neighbors from this vertex regardless of incoming and outgoing status
             """
-            # for directed graphs need to concatenate both the incoming and outgoing directions
-            if self.graph.directed:
-                return self.IncomingNeighborIndices().union(self.OutgoingNeighborIndices())
-            # for undirected graphs incoming_edges and outgoing_edges are identical
-            else:
-                return self.IncomingNeighborIndices()
-
+            return self.neighbors
 
 
     class Edge(object):
