@@ -16,6 +16,7 @@ class Graph(object):
         Graph class defines the basic graph structure for addax used for clustering commmunities, motif discovery,
         and generating random examples
 
+        @param prefix: a string to reference this graph by
         @param directed: indicates if the graph is directed or undirected
         """
         self.prefix = prefix
