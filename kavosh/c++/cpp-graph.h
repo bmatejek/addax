@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <cstring>
 #include <unordered_set>
-#include <unordered_map>
+#include <map>
 
 
 
@@ -16,26 +16,32 @@ class Graph;
 
 
 
+// I/O functions for raeding a graph
+Graph *ReadGraph(const char input_filename[4096]);
+
+
+
 class Vertex {
 public:
     // constructors/destructors
-    Vertex(Graph *graph, long index, int community);
+    Vertex(Graph *input_graph, long input_index, int input_community);
     ~Vertex();
 
     // modifying functions
     void AddEdge(Edge *edge);
 
-private:
     // instance variables
     Graph *graph;
     long index;
     int community;
 
+    // extra instance variables keep track of the ingoing and outgoing edges from the vertex
     std::vector<Edge *> incoming_edges;
     std::vector<Edge *> outgoing_edges;
-    std::unordered_set<Edge *> incoming_neighbors;
-    std::unordered_set<Edge *> outgoing_neighbors;
-    std::unordered_set<Edge *> neighbors;
+    // keep track of incoming and outgoing neighbors
+    std::unordered_set<long> incoming_neighbors;
+    std::unordered_set<long> outgoing_neighbors;
+    std::unordered_set<long> neighbors;
 };
 
 
@@ -46,7 +52,6 @@ public:
     Edge(Graph *graph, long source_index, long destination_index, float weight);
     ~Edge();
 
-private:
     // instance variables
     Graph *graph;
     long source_index;
@@ -76,10 +81,14 @@ public:
     void AddVertex(long index, int community = -1);
     void AddEdge(long source_index, long destination_index, float weight = -1);
 
-private:
+    // attribute functions
+    long NVertices(void);
+    long NEdges(void);
+
+    // instance variables
     char prefix[128];
     bool directed;
-    std::unordered_map<long, Vertex *> vertices;
+    std::map<long, Vertex *> vertices;
     std::vector<Edge *> edges;
     std::unordered_set<std::pair<long, long>, edge_pair_hash> edge_set;
 };
