@@ -1,14 +1,17 @@
 #include <stdio.h>
 #include <ctime>
 #include <map>
+#include <string>
 #include <nauty.h>
 #include "cpp-nauty.h"
 #include "cpp-graph.h"
 
 
 
-long enumerated_subgraphs = 0;
-NyGraph *nauty_graph;
+static long enumerated_subgraphs = 0;
+static NyGraph *nauty_graph;
+static std::map<std::string, long> certificates;
+
 
 
 std::vector<long> Validate(Graph *G,
@@ -161,10 +164,9 @@ void EnumerateVertex(Graph *G,
         short index = 0;
 
         for (short level = 0; level <= i - 1; ++level) {
-            for (std::unordered_set<long>::iterator it = S[level].begin(); it != S[level].end(); ++it) {
+            for (std::unordered_set<long>::iterator it = S[level].begin(); it != S[level].end(); ++it, ++index) {
                 // map this vertex to an index between 0 and k - 1
                 index_to_vertex[index] = *it;
-                ++index;
             }
         }
 
@@ -206,7 +208,26 @@ void EnumerateVertex(Graph *G,
         // clear the graph
         EMPTYGRAPH(nauty_graph->matrix, nauty_graph->no_setwords, nauty_graph->no_vertices);
 
-        // final recursion limit reached for this subgraph 
+        long nbytes = nauty_graph->no_vertices * nauty_graph->no_setwords * sizeof(setword);
+        unsigned char certificate_bytes[nbytes];
+        memcpy(&(certificate_bytes[0]), &(nauty_graph->cmatrix[0]), nbytes);
+
+        // construct a string certificate - need to iteratively add chars to the string
+        // to allow for null characters which are common in the cmatrix
+        std::string certificate = std::string();
+        for (long iv = 0; iv < nbytes; ++iv) {
+            certificate.push_back(certificate_bytes[iv]);
+        }
+
+        // add this enumerated subgraph to the grouping of certificates
+        if (certificates.find(certificate) == certificates.end()) {
+            certificates[certificate] = 1;
+        }
+        else {
+            certificates[certificate] += 1;
+        }
+
+        // final recursion limit reached for this subgraph
         return;
     }
 
@@ -260,6 +281,9 @@ void EnumerateSubgraphsFromNode(Graph *G, short k, long u)
     // create an empty NyGraph (Nauty Graph) data structure
     nauty_graph = new NyGraph(k);
 
+    // create an empty certificates dictionary
+    certificates = std::map<std::string, long>();
+
     // make sure this vertex appears in the graph
     assert (G->vertices.find(u) != G->vertices.end());
 
@@ -276,6 +300,33 @@ void EnumerateSubgraphsFromNode(Graph *G, short k, long u)
 
     // enumerate all subgraphs of size k - 1 that contain the root u
     EnumerateVertex(G, u, S, k - 1, 1, visited);
+
+    char output_filename[128];
+    snprintf(output_filename, 128, "/home/brian/motifs/temp/hemi-brain-c++/motif-size-%03d-node-%016ld-certificates.txt", k, u);
+
+    // open file
+    FILE *fp = fopen(output_filename, "w");
+    if (!fp) { fprintf(stderr, "Failed to write to %s\n", output_filename); exit(-1); }
+
+    for (std::map<std::string, long>::iterator it = certificates.begin(); it != certificates.end(); ++it) {
+        const char *certificate = it->first.c_str();
+
+        for (long iv = 0; iv < it->first.length(); ++iv) {
+            fprintf(fp, "%02x", (unsigned char) certificate[iv]);
+        }
+        fprintf(fp, ": %ld\n", it->second);
+    }
+
+    exit(-1);
+
+    // close file
+    fclose(fp);
+
+    // clear the certificates
+    certificates.clear();
+
+    // free memory
+    delete nauty_graph;
 }
 
 
