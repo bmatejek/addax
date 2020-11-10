@@ -252,12 +252,15 @@ void EnumerateSubgraphsSequentially(Graph *G, short k)
 int main(void)
 {
     unsigned int start_time = clock();
-    Graph *graph = ReadGraph("/home/bmatejek/Dropbox/motifs-temp/graphs/hemi-brain.graph");
+    Graph *graph = ReadGraph("/home/brian/Dropbox/motifs-temp/graphs/hemi-brain.graph");
     if (!graph) exit(-1);
     printf("Read graph in %0.2lf seconds.\n", (float)(clock() - start_time) / CLOCKS_PER_SEC);
 
-    int k = 4;
+    int k = 3;
     EnumerateSubgraphsSequentially(graph, k);
+
+    // free memory
+    delete graph;
 
     return 1;
 }

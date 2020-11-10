@@ -88,6 +88,9 @@ weight(weight)
 
 Edge::~Edge(void)
 {
+    /*
+    Destructor for eliminating graph object
+    */
 }
 
 
@@ -113,6 +116,13 @@ Graph::~Graph(void)
     /*
     Destructor for eliminating graph object
     */
+    for (std::map<long, Vertex *>::iterator it = vertices.begin(); it != vertices.end(); ++it) {
+        delete it->second;
+    }
+
+    for (unsigned long ie = 0; ie < edges.size(); ++ie) {
+        delete edges[ie];
+    }
 }
 
 void Graph::AddVertex(long index, int community)
@@ -196,6 +206,7 @@ long Graph::NEdges(void)
 
 Graph *ReadGraph(const char input_filename[4096])
 {
+    // open file
     FILE *fp = fopen(input_filename, "rb");
     if (!fp) { fprintf(stderr, "Failed to open %s\n", input_filename); return NULL; }
 
@@ -231,6 +242,9 @@ Graph *ReadGraph(const char input_filename[4096])
 
         graph->AddEdge(source_index, destination_index, weight);
     }
+
+    // close file
+    fclose(fp);
 
     return graph;
 }
