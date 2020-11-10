@@ -70,7 +70,6 @@ struct edge_pair_hash
 
 
 
-
 class Graph {
 public:
     // constructors/destructors

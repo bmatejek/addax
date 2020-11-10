@@ -1,11 +1,14 @@
 #include <stdio.h>
 #include <ctime>
-#include <unordered_map>
+#include <map>
+#include <nauty.h>
+#include "cpp-nauty.h"
 #include "cpp-graph.h"
 
 
-long enumerated_subgraphs = 0;
 
+long enumerated_subgraphs = 0;
+NyGraph *nauty_graph;
 
 
 std::vector<long> Validate(Graph *G,
@@ -129,7 +132,7 @@ std::vector<std::vector<long> > Combinations(std::vector<long> &vertices, long r
 
 void EnumerateVertex(Graph *G,
                      long u,
-                     std::unordered_map<long, std::unordered_set<long> > &S,
+                     std::map<long, std::unordered_set<long> > &S,
                      short rem,
                      short i,
                      std::unordered_set<long> &visited)
@@ -152,9 +155,58 @@ void EnumerateVertex(Graph *G,
     if (!rem) {
         // the set of vertices in S[0] to S[i - 1] contain the subgraph
         // note that the sets in S[i] ... S[k] do not belong to the subgraph but a previous iteration
+
+        // create a mapping from vertices to linear indices
+        std::map<long, long> index_to_vertex = std::map<long, long>();
+        short index = 0;
+
+        for (short level = 0; level <= i - 1; ++level) {
+            for (std::unordered_set<long>::iterator it = S[level].begin(); it != S[level].end(); ++it) {
+                // map this vertex to an index between 0 and k - 1
+                index_to_vertex[index] = *it;
+                ++index;
+            }
+        }
+
+        // the size of the motif
+        long k = index;
+        for (long out_index = 0; out_index < k; ++out_index) {
+            long out_vertex = index_to_vertex[out_index];
+            for (long in_index = 0; in_index < k; ++in_index) {
+                long in_vertex = index_to_vertex[in_index];
+
+                // there is an edge from out_vertex to in_vertex
+                if (G->vertices[out_vertex]->outgoing_neighbors.find(in_vertex) != G->vertices[out_vertex]->outgoing_neighbors.end()) {
+                    ADDELEMENT((GRAPHROW(nauty_graph->matrix, out_index, nauty_graph->no_setwords)), in_index);
+                }
+            }
+        }
+
+        /*
+        If nauty_graph->options->defaultptn = FALSE the vertices have colors. The colors are determined by the
+        array int *ptn. If nauty_graph->options->getcanon = TRUE, nauty_graph->lab will list the vertices in g
+        in the otder in which they need to be relabled.
+        */
+
+        // call the dense version of nauty
+        densenauty(
+                    nauty_graph->matrix,
+                    nauty_graph->lab,
+                    nauty_graph->ptn,
+                    nauty_graph->orbits,
+                    nauty_graph->options,
+                    nauty_graph->stats,
+                    nauty_graph->no_setwords,
+                    nauty_graph->no_vertices,
+                    nauty_graph->cmatrix
+                );
+
         enumerated_subgraphs += 1;
 
-        // return a sorted tuple for this graph
+        // clear the graph
+        EMPTYGRAPH(nauty_graph->matrix, nauty_graph->no_setwords, nauty_graph->no_vertices);
+
+        // final recursion limit reached for this subgraph 
         return;
     }
 
@@ -205,6 +257,9 @@ void EnumerateSubgraphsFromNode(Graph *G, short k, long u)
 
     enumerated_subgraphs = 0;
 
+    // create an empty NyGraph (Nauty Graph) data structure
+    nauty_graph = new NyGraph(k);
+
     // make sure this vertex appears in the graph
     assert (G->vertices.find(u) != G->vertices.end());
 
@@ -215,7 +270,7 @@ void EnumerateSubgraphsFromNode(Graph *G, short k, long u)
     visited.insert(u);
 
     // create the selection (first layer only ever has the root vertex)
-    std::unordered_map<long, std::unordered_set<long> > S = std::unordered_map<long, std::unordered_set<long> >();
+    std::map<long, std::unordered_set<long> > S = std::map<long, std::unordered_set<long> >();
     S[0] = std::unordered_set<long>();
     S[0].insert(u);
 
