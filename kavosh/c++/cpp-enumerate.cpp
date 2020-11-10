@@ -317,8 +317,6 @@ void EnumerateSubgraphsFromNode(Graph *G, short k, long u)
         fprintf(fp, ": %ld\n", it->second);
     }
 
-    exit(-1);
-
     // close file
     fclose(fp);
 
