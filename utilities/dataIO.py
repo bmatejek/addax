@@ -21,8 +21,8 @@ def ReadGraph(input_filename):
     byte_index = 0
 
     # read the basic attributes for the graph
-    nvertices, nedges, directed, = struct.unpack('qq?', data[byte_index:byte_index + 17])
-    byte_index += 17
+    nvertices, nedges, directed, colored, = struct.unpack('qq??', data[byte_index:byte_index + 18])
+    byte_index += 18
 
     # read the prefix
     prefix, = struct.unpack('128s', data[byte_index:byte_index + 128])
@@ -34,10 +34,10 @@ def ReadGraph(input_filename):
 
     # read all the vertices and add them to the graph
     for _ in range(nvertices):
-        index, community, = struct.unpack('qq', data[byte_index:byte_index + 16])
-        byte_index += 16
+        index, enumeration_index, community, color, = struct.unpack('qqqq', data[byte_index:byte_index + 32])
+        byte_index += 32
 
-        graph.AddVertex(index, community)
+        graph.AddVertex(index, enumeration_index, community, color)
 
     # read all of the edges and add them to the graph
     for _ in range(nedges):
@@ -66,17 +66,18 @@ def WriteGraph(graph, output_filename):
     nvertices = graph.NVertices()
     nedges = graph.NEdges()
     directed = graph.directed
+    colored = graph.colored
     prefix = graph.prefix
 
     # create an empty byte array which we will concatenate later
     compressed_graph = []
 
-    compressed_graph.append(compressor.compress(struct.pack('qq?', nvertices, nedges, directed)))
+    compressed_graph.append(compressor.compress(struct.pack('qq??', nvertices, nedges, directed, colored)))
     compressed_graph.append(compressor.compress(struct.pack('128s', prefix.encode())))
 
     # write all of the vertices and their attributes
     for vertex in graph.vertices.values():
-        compressed_graph.append(compressor.compress(struct.pack('qq', vertex.index, vertex.community)))
+        compressed_graph.append(compressor.compress(struct.pack('qqqq', vertex.index, vertex.enumeration_index, vertex.community, vertex.color)))
 
     # write all of the edges and their attributes
     for edge in graph.edges:

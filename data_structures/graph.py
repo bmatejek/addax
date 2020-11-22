@@ -11,16 +11,18 @@ import community as community_louvain
 
 
 class Graph(object):
-    def __init__(self, prefix, directed):
+    def __init__(self, prefix, directed, colored):
         """
         Graph class defines the basic graph structure for addax used for clustering commmunities, motif discovery,
         and generating random examples
 
         @param prefix: a string to reference this graph by
         @param directed: indicates if the graph is directed or undirected
+        @param colored: indicates if the nodes in the graph have color
         """
         self.prefix = prefix
         self.directed = directed
+        self.colored = colored
 
         # vertices is a mapping from the vertex index to the vertex object
         self.vertices = {}
@@ -29,18 +31,20 @@ class Graph(object):
         # the edge set contains a list of (source, destination) indices
         self.edge_set = set()
 
-    def AddVertex(self, index, community = -1):
+    def AddVertex(self, index, enumeration_index, community = -1, color = -1):
         """
         Add a vertex to the graph
 
         @param index: the index for the vertex
+        @param enumeration_index: an internal ordering system for enumeration speed up
         @param community: the community that the vertex belongs to (default = -1)
+        @param color: the color that the vertex has (default = -1)
         """
         # vertices must have unique indices
         assert (not index in self.vertices)
 
         # create the vertex and add it to the mapping
-        vertex = self.Vertex(self, index, community)
+        vertex = self.Vertex(self, index, enumeration_index, community, color)
         self.vertices[index] = vertex
 
     def AddEdge(self, source_index, destination_index, weight = 1):
@@ -144,17 +148,21 @@ class Graph(object):
         return communities
 
     class Vertex(object):
-        def __init__(self, graph, index, community = -1):
+        def __init__(self, graph, index, enumeration_index, community = -1, color = -1):
             """
             Vertex class defines the vertices in a graph that are labeled by the index
 
             @param graph: the larger graph that contains this vertex
             @param index: the integer index that corresponds to this vertex
+            @param enumeration_index: an internal ordering system for enumeration speed up
             @param community: the community that the vertex belongs to (default = -1)
+            @param color: the color that the vertex has (default = -1)
             """
             self.graph = graph
             self.index = index
+            self.enumeration_index = enumeration_index
             self.community = community
+            self.color = color
 
             # extra instance variables keep track of the ingoing and outgoing edges from the vertex
             self.incoming_edges = []
