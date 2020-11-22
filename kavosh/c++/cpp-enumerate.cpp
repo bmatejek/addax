@@ -16,7 +16,8 @@ static std::map<std::string, long> certificates;
 
 std::vector<long> Validate(Graph *G,
                            std::unordered_set<long> &parents,
-                           long u, std::unordered_set<long> &visited)
+                           long u,
+                           std::unordered_set<long> &visited)
 {
     /*
     Find the valid vertices for the next recursive level. Excludes elements with indices smaller
@@ -43,7 +44,7 @@ std::vector<long> Validate(Graph *G,
             long w = *it2;
 
             // if the root vertex is less than the neighbor and the neighbor has not been visited
-            if (u < w && visited.find(w) == visited.end()) {
+            if (G->vertices[u]->enumeration_index < G->vertices[w]->enumeration_index && visited.find(w) == visited.end()) {
                 valid_vertices.insert(w);
                 visited.insert(w);
             }
@@ -356,7 +357,9 @@ void EnumerateSubgraphsSequentially(Graph *G, short k)
 int main(void)
 {
     unsigned int start_time = clock();
-    Graph *graph = ReadGraph("/home/brian/Dropbox/motifs-temp/graphs/hemi-brain.graph");
+    //Graph *graph = ReadGraph("/home/brian/Dropbox/motifs-temp/graphs/hemi-brain.graph");
+    Graph *graph = ReadBZ2Graph("/home/brian/motifs/graphs/hemi-brain.graph.bz2");
+
     if (!graph) exit(-1);
     printf("Read graph in %0.2lf seconds.\n", (float)(clock() - start_time) / CLOCKS_PER_SEC);
 

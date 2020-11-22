@@ -3,7 +3,7 @@ CFLAGS= -fPIC
 DEPS = cpp-graph.h
 
 INC_DIR = -I. -I/home/brian/software/nauty
-LIBS = /home/brian/software/nauty/nauty.a
+LIBS = /home/brian/software/nauty/nauty.a /usr/lib/x86_64-linux-gnu/libbz2.a
 
 
 # Makefile syntax
