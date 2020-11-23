@@ -1,277 +1,106 @@
-import os
-import sys
-import time
-import pynauty
+import networkx as nx
 
 
 
-from addax.data_structures.graph import Graph
-from addax.kavosh.enumerate import EnumerateSubgraphsFromNode, EnumerateSubgraphsSequentially
-from addax.utilities.dataIO import PickleData, ReadPickledData
-from addax.visualize.graph import VisualizeGraph
+from addax.utilities.dataIO import ReadGraph
 
 
 
-def ClassifySubgraph(G, subgraph, k):
+def ParseCertificate(graph, k, certificate):
     """
-    Given a subgraph, determine the unique certificate corresponding to the canonical labeling of that graph
+    Produce a canonical graph from a certificate
 
-    @param G: the graph from which the subgraph comes
-    @param subgraph: the subgraph extracted via Kavosh for which to determine the canonical label
-    @param k: the size of the subgraph
-
-    Returns a certificate for the subgraph corresponding to the canonical labeling of that graph
-    """
-    # create a mapping from the vertex indices to numpy indices
-    vertex_mapping = {}
-    for iv, vertex in enumerate(subgraph):
-        vertex_mapping[vertex] = iv
-
-    # construct a dictionary of neighbors in the subgraph
-    adj_neighbors = {}
-
-    # iterate over all of the indices in the subgraph
-    for vertex_index in subgraph:
-        # get the index between 0 and k - 1 for this vertex
-        index_one = vertex_mapping[vertex_index]
-
-        # keep track of the adjacent neighbors
-        adj_neighbors[index_one] = []
-
-        # find all the neighbors to this vertex in the graph
-        for neighbor_index in subgraph:
-            # skip if this pair does not have an edge from vertex_index to neighbor_index
-            if not (vertex_index, neighbor_index) in G.edge_set: continue
-
-            # get the index between 0 and k - 1 for this vertex
-            index_two = vertex_mapping[neighbor_index]
-
-            assert (not index_one == index_two)
-
-            adj_neighbors[index_one].append(index_two)
-
-    # create a pynauty graph of size k for the subgraph with directedness dependent on G
-    py_subgraph = pynauty.Graph(k, directed = G.directed, adjacency_dict = adj_neighbors)
-
-    # get the certificate of this subgraph as a byte string
-    certificate = pynauty.certificate(py_subgraph)
-
-    return certificate
-
-
-
-def ParseCertificate(k, certificate, directed):
-    """
-    Parse a certificate given by pynauty and determine the canonical motif
-
+    @param graph: the input graph from which the certificate was generated
     @param k: motif size
     @param certificate: the certificate from Nauty to parse
-    @param directed: is the motif a directed or undirected motif
-
-    Returns a canonical graph for this motif as a graph object
     """
+    # this will require substantial debugging and validation for k > 256
+    # currently skipped since motifs that size are computationally infeasible
+    # nauty almost certainly can never run on graphs that size
+    assert (k < 256)
+
     # each vertex gets a certain number of bits in the certificate that contain the adjacency
     # matrix for that vertex. The number of bits is determined by the no_setwords in pynauty. This variable
     # matches the number of 64-bit words (on a 64-bit system) needed to fit all vertices.
-    assert (not (len(certificate) % k))
-    bytes_per_vertex = len(certificate) // k
+    # for colored graphs we also add on 64 bits for each node in the subgraph for coloring
+    if graph.colored:
+        # if the graph is colored, there are 16 characters per vertex
+        # rest of the string represents the canonical labeling
+        coloring = certificate[-16 * k:]
+        certificate = certificate[:-16 * k]
 
-    # create an empty graph object
-    canonical_graph = Graph(directed)
-    for iv in range(k):
-        canonical_graph.AddVertex(iv)
+        # convert the vertex bytes (in hex) to base 10 integer
+        vertex_colors = [int(coloring[16 * iv: 16 * (iv + 1)], 16) for iv in range(k)]
 
+    # create a new netwokx graph object
+    if graph.directed:
+        nx_graph = nx.DiGraph()
+    else:
+        nx_graph = nx.Graph()
+
+    # add a vertex for each of the k nodes in the subgraph
+    for index in range(k):
+        # colored graphs have labels for their colors 
+        if graph.colored:
+            nx_graph.add_node(index, label = 'Color: {}'.format(vertex_colors[index]))
+        else:
+            nx_graph.add_node(index)
+
+    # get the number of words per veretx (must be a multiple of 2 * k)
+    assert (not (len(certificate) % (2 * k)))
+    # based on our output of using hexademical in cpp-enumerate.cpp (i.e., %02x),
+    # each byte is written with two letters in our input string (e.g., aa, 02, 10, etc.)
+    bytes_per_vertex = len(certificate) // k // 2
+
+    # iterate over every vertex and extract the corresponding adjacency matrix
     for vertex in range(k):
-        certificate_bytes = certificate[vertex * bytes_per_vertex:(vertex + 1) * bytes_per_vertex]
+        # multiple by two since we are using two characters in the string per byte (wrriten in hexademical)
+        certificate_bytes = certificate[vertex * bytes_per_vertex * 2:(vertex + 1) * bytes_per_vertex * 2]
 
-        # the certificate starts with the "farthest right" bit
-        for byte_offset, byte in enumerate(certificate_bytes[::-1]):
+        for byte_offset, iv in enumerate(range(0, len(certificate_bytes), 2)):
+            # get the byte as an integer (using hexadecimal currently)
+            byte = int(certificate_bytes[iv:iv+2], 16)
             assert (byte < 256)
 
-            # 8 bits per byte
+            # 8 bits per byte (little endian)
             for bit_offset in range(8):
                 bit = byte & (2 ** 7)
                 byte = byte << 1
 
+                # if this bit is 1, there is an edge from vertex to this location
                 if bit:
-                    # determine the neighbor by the byte and bit offsets
-                    neighbor_vertex = 8 * byte_offset + (bit_offset)
-                    canonical_graph.AddEdge(vertex, neighbor_vertex)
+                    # determine the neighbor by the byte and bit offset
+                    neighbor_vertex = 8 * (bytes_per_vertex - byte_offset - 1) + bit_offset
+                    nx_graph.add_edge(vertex, neighbor_vertex)
 
-    return canonical_graph
+    return nx_graph
 
 
 
-def ClassifySubgraphsFromNode(G, k, u):
+def ParseCertificates(input_filename, k):
     """
-    Classify all the subgraphs of size k from vertex u using the Nauty framework
+    Parse the certificates generated for this subgraph
 
-    @param G: graph
-    @param k: motif size
-    @param u: root vertex index
-
-    Returns a dictionary of certificates
+    @param input_filename: location for the graph to enumerate
+    @parak k: the motif subgraph size to find
     """
+    # read the graph
+    graph = ReadGraph(input_filename, vertices_only = True)
 
-    # start statistics
-    start_time = time.time()
+    # read the combined enumerated subgraphs file
+    subgraphs_filename = 'subgraphs/{}/motif-size-{:03d}.txt'.format(graph.prefix, k)
+    with open(subgraphs_filename, 'r') as fd:
+        # read all of the certificates and enumerated subgraphs
+        for subgraph_index, certificate_info in enumerate(fd.readlines()):
+            certificate = certificate_info.split(':')[0].strip()
+            nsubgraphs = int(certificate_info.split(':')[1].strip())
 
-    # create a dictionary for the certificates
-    certificates = {}
+            # parse the certificate for this graph
+            nx_graph = ParseCertificate(graph, k, certificate)
 
-    nsubgraphs = 0
+            # create the graph drawing structure
+            A = nx.nx_agraph.to_agraph(nx_graph)
+            A.layout(prog='dot')
 
-    # enumerate all subgraphs rooted at vertext u using the Kavosh method
-    for subgraph in EnumerateSubgraphsFromNode(G, k, u):
-        # get the classification for this subgraph
-        certificate = ClassifySubgraph(G, subgraph, k)
-
-        # create a dictionary of certificates
-        if not certificate in certificates:
-            certificates[certificate] = 1
-        else:
-            certificates[certificate] += 1
-
-        nsubgraphs += 1
-
-    # save the certificates to disk
-    output_directory = 'temp/{}'.format(G.prefix)
-    if not os.path.exists(output_directory):
-        os.makedirs(output_directory, exist_ok = True)
-    output_filename = '{}/motif-size-{:03d}-node-{:016d}-certificates.pickle'.format(output_directory, k, u)
-    PickleData(certificates, output_filename)
-
-    # print statistics
-    start_time = time.time() - start_time
-    print ('Classified {} subgraphs of size {} for node {} in {:0.2f} seconds'.format(nsubgraphs, k, u, start_time))
-
-    # save the timing to disk
-    output_timing_directory = 'temp/{}/timing'.format(G.prefix)
-    if not os.path.exists(output_timing_directory):
-        os.makedirs(output_timing_directory, exist_ok = True)
-    output_timing_filename = '{}/motif-size-{:03d}-node-{:016d}.txt'.format(output_timing_directory, k, u)
-    with open(output_timing_filename, 'w') as fd:
-        fd.write('Total Time: {:0.2f} seconds\n'.format(start_time))
-
-    return certificates
-
-
-
-def ClassifySubgraphsSequentially(G, k):
-    """
-    Classify all subgraphs of size k using the Nauty framework
-
-    @param G: graph
-    @param k: motif size
-
-    Returns a dictionary of certificates
-    """
-
-    # start statistics
-    start_time = time.time()
-
-    # create a dictionary for the certificates
-    certificates = {}
-
-    # enumerate all subgraphs using the Kavosh method
-    for subgraph in EnumerateSubgraphsSequentially(G, k):
-        # get the classification for this subgraph
-        certificate = ClassifySubgraph(G, subgraph, k)
-
-        # create a dictionary of certificates
-        if not certificate in certificates:
-            certificates[certificate] = 1
-        else:
-            certificates[certificate] += 1
-
-    # save the certificates to disk
-    output_directory = 'temp/{}'.format(G.prefix)
-    if not os.path.exists(output_directory):
-        os.makedirs(output_directory, exist_ok = True)
-    output_filename = '{}/motif-size-{:03d}-certificates.pickle'.format(output_directory, k)
-    PickleData(certificates, output_filename)
-
-    # print statistics
-    start_time = time.time() - start_time
-    print ('Classified subgraphs of size {} in {:0.2f} seconds'.format(k, u, start_time))
-
-    # save the timing to disk
-    output_timing_directory = 'temp/{}/timing'.format(G.prefix)
-    if not os.path.exists(output_timing_directory):
-        os.makedirs(output_timing_directory, exist_ok = True)
-    output_timing_filename = '{}/motif-size-{:03d}.txt'.format(output_timing_directory, k)
-    with open(output_timing_filename, 'w') as fd:
-        fd.write('Total Time: {:0.2f} seconds\n'.format(start_time))
-
-    return certificates
-
-
-
-def CombineSubgraphCertificates(G, k):
-    """
-    Combine the generated certificates for all nodes in the graph G
-
-    @param G: graph
-    @param k: motif size
-
-    Returns a dictionary of certificates
-    """
-
-    # start statistics
-    total_time = 0
-
-    certificates = {}
-
-    # get the input/output directory
-    directory = 'temp/{}'.format(G.prefix)
-    if not os.path.exists(directory):
-        sys.stderr.write('Failed to find any input certificates...\n')
-        sys.exit(-1)
-    timing_directory = 'temp/{}/timing'.format(G.prefix)
-    if not os.path.exists(timing_directory):
-        sys.stderr.write('Failed to find any input certificates...\n')
-        sys.exit(-1)
-
-    for u in G.vertices.keys():
-        # make sure that the input file exists
-        input_filename = '{}/motif-size-{:03d}-node-{:016d}-certificates.pickle'.format(directory, k, u)
-        if not os.path.exists(input_filename):
-            sys.stderr.write('Missing certificates file: {}...\n'.format(input_filename))
-            sys.exit(-1)
-
-        # read the input certifiicates from disk
-        certificates_from_node = ReadPickledData(input_filename)
-
-        # add the certificates to the global array
-        for certificate in certificates_from_node:
-            if not certificate in certificates:
-                certificates[certificate] = certificates_from_node[certificate]
-            else:
-                certificates[certificate] += certificates_from_node[certificate]
-
-        # make sure that the input file exists
-        input_timing_filename = '{}/motif-size-{:03d}-node-{:016d}.txt'.format(timing_directory, k, u)
-        if not os.path.exists(input_timing_filename):
-            sys.stderr.write('Missing timing file: {}...\n'.format(input_filename))
-            sys.exit(-1)
-
-        # concatenate the total time needed
-        with open(input_timing_filename, 'r') as fd:
-            total_time += float(fd.readline().split()[2])
-
-    # save the certificates to disk
-    output_directory = 'temp/{}'.format(G.prefix)
-    if not os.path.exists(output_directory):
-        os.makedirs(output_directory, exist_ok = True)
-    output_filename = '{}/motif-size-{:03d}-certificates.pickle'.format(output_directory, k)
-    PickleData(certificates, output_filename)
-
-    # save the timing to disk
-    output_timing_directory = 'temp/{}/timing'.format(G.prefix)
-    if not os.path.exists(output_timing_directory):
-        os.makedirs(output_timing_directory, exist_ok = True)
-    output_timing_filename = '{}/motif-size-{:03d}.txt'.format(output_timing_directory, k)
-    with open(output_timing_filename, 'w') as fd:
-        fd.write('Total Time: {:0.2f} seconds\n'.format(total_time))
-
-    return certificates
+            output_filename = 'subgraphs/{}/motif-size-{:03d}-motif-{}-found-{}.dot'.format(graph.prefix, k, subgraph_index, nsubgraphs)
+            A.draw(output_filename)
