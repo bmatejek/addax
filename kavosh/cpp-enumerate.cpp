@@ -44,7 +44,9 @@ std::vector<long> Validate(Graph *G,
             long w = *it2;
 
             // if the root vertex is less than the neighbor and the neighbor has not been visited
-            if (G->vertices[u]->enumeration_index < G->vertices[w]->enumeration_index && visited.find(w) == visited.end()) {
+            // we use <= rather than < since u is always in visited as the S[0] entry
+            // By using <=, we can enumerate all subgraphs with duplication by setting the enumeration indices to be non unique 
+            if (G->vertices[u]->enumeration_index <= G->vertices[w]->enumeration_index && visited.find(w) == visited.end()) {
                 valid_vertices.insert(w);
                 visited.insert(w);
             }
