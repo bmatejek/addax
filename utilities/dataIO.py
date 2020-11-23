@@ -50,6 +50,32 @@ def ReadGraph(input_filename):
 
 
 
+def ReadPrefix(input_filename):
+    """
+    Read the prefix of a graph data structure from disk
+
+    @param input_filename: the filename where the graph data is stored
+    """
+    assert (input_filename.endswith('.graph.bz2'))
+
+    data = bz2.decompress(open(input_filename, 'rb').read())
+
+    byte_index = 0
+
+    # read the basic attributes for the graph
+    nvertices, nedges, directed, colored, = struct.unpack('qq??', data[byte_index:byte_index + 18])
+    byte_index += 18
+
+    # read the prefix
+    prefix, = struct.unpack('128s', data[byte_index:byte_index + 128])
+    byte_index += 128
+
+    prefix = prefix.decode().strip('\0')
+
+    return prefix
+
+
+
 def WriteGraph(graph, output_filename):
     """
     Write a graph to disk for later I/O access
