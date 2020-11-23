@@ -1,3 +1,4 @@
+#include <pwd.h>
 #include <stdio.h>
 #include <ctime>
 #include <map>
@@ -45,7 +46,7 @@ std::vector<long> Validate(Graph *G,
 
             // if the root vertex is less than the neighbor and the neighbor has not been visited
             // we use <= rather than < since u is always in visited as the S[0] entry
-            // By using <=, we can enumerate all subgraphs with duplication by setting the enumeration indices to be non unique 
+            // By using <=, we can enumerate all subgraphs with duplication by setting the enumeration indices to be non unique
             if (G->vertices[u]->enumeration_index <= G->vertices[w]->enumeration_index && visited.find(w) == visited.end()) {
                 valid_vertices.insert(w);
                 visited.insert(w);
@@ -375,7 +376,9 @@ void EnumerateSubgraphsFromNode(Graph *G, short k, long u)
     EnumerateVertex(G, u, S, k - 1, 1, visited);
 
     char output_filename[4096];
-    snprintf(output_filename, 4096, "/home/brian/motifs/temp/%s/motif-size-%03d-node-%016ld-certificates.txt", G->prefix, k, u);
+    // home directory
+    passwd *pw = getpwuid(getuid());
+    snprintf(output_filename, 4096, "%s/motifs/temp/%s/motif-size-%03d-node-%016ld-certificates.txt", pw->pw_dir, G->prefix, k, u);
 
     // open file
     FILE *fp = fopen(output_filename, "w");
@@ -401,7 +404,7 @@ void EnumerateSubgraphsFromNode(Graph *G, short k, long u)
 
     // print timing statistics
     char timing_filename[4096];
-    snprintf(timing_filename, 4096, "/home/brian/motifs/temp/%s/timing/motif-size-%03d-node-%016ld-certificates.txt", G->prefix, k, u);
+    snprintf(timing_filename, 4096, "%s/motifs/temp/%s/timing/motif-size-%03d-node-%016ld-certificates.txt", pw->pw_dir, G->prefix, k, u);
 
     // open timing file
     FILE *tfp = fopen(timing_filename, "w");
@@ -469,6 +472,7 @@ void CppEnumerateSubgraphsFromNodes(const char *input_filename, short k, long *n
     // read the input file
     Graph *graph = ReadBZ2Graph(input_filename);
     if (!graph) exit(-1);
+
 
     for (long iv = 0; iv < nnodes; ++iv) {
         EnumerateSubgraphsFromNode(graph, k, nodes[iv]);

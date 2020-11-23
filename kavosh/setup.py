@@ -1,3 +1,7 @@
+import os
+
+
+
 import numpy as np
 
 
@@ -6,7 +10,9 @@ from distutils.core import setup, Extension
 from Cython.Build import cythonize
 
 
-nauty_dir = '/home/brian/software/nauty'
+
+home_dir = os.path.expanduser('~')
+nauty_dir = '{}/software/nauty'.format(home_dir)
 
 
 
@@ -15,7 +21,7 @@ extensions = [
         name = 'enumerate',
         include_dirs = [np.get_include(), nauty_dir],
         libraries = ['bz2'],
-        library_dirs = ['/home/brian/software/nauty/', '/usr/lib/x86_64-linux-gnu/'],
+        library_dirs = [nauty_dir],
         sources = ['enumerate.pyx', 'cpp-enumerate.cpp', 'cpp-nauty.cpp', 'cpp-graph.cpp'],
         extra_objects = [
             nauty_dir + '/' + 'nauty.o',
