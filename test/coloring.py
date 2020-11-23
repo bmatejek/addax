@@ -70,11 +70,11 @@ def CreateTestColoredExample():
         # update the vertex indices
         vertex_index += 3
 
-    # create 50 graphs (0 -> 1 -> 0)
+    # create 50 graphs (0 -> 2 -> 0)
     for _ in range(50):
         # add the three vertices
         graph.AddVertex(vertex_index, vertex_index, community = -1, color = 0)
-        graph.AddVertex(vertex_index + 1, vertex_index + 1, community = -1, color = 1)
+        graph.AddVertex(vertex_index + 1, vertex_index + 1, community = -1, color = 2)
         graph.AddVertex(vertex_index + 2, vertex_index + 2, community = -1, color = 0)
 
         # add the edges
