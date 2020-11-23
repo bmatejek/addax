@@ -30,7 +30,7 @@ def ReadGraph(input_filename):
 
     prefix = prefix.decode().strip('\0')
 
-    graph = Graph(prefix, directed)
+    graph = Graph(prefix, directed, colored)
 
     # read all the vertices and add them to the graph
     for _ in range(nvertices):
