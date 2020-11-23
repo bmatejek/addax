@@ -129,5 +129,5 @@ dmypy.json
 .pyre/
 
 # temp c++ files 
-*.o
-kavosh/c++/cpp-enumerate
+*.so
+kavosh/enumerate.cpp
