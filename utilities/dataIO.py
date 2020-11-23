@@ -8,11 +8,12 @@ from addax.data_structures.graph import Graph
 
 
 
-def ReadGraph(input_filename):
+def ReadGraph(input_filename, vertices_only = False):
     """
     Read a graph data structure from disk
 
     @param input_filename: the filename where the graph data is stored
+    @param vertices_only: boolean flag that determines if edges are read
     """
     assert (input_filename.endswith('.graph.bz2'))
 
@@ -38,6 +39,9 @@ def ReadGraph(input_filename):
         byte_index += 32
 
         graph.AddVertex(index, enumeration_index, community, color)
+
+    # if the flag to read only vertices is on, avoid reading edges
+    if vertices_only: return graph
 
     # read all of the edges and add them to the graph
     for _ in range(nedges):
