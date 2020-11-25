@@ -87,6 +87,9 @@ def EnumerateSubgraphsFromNodes(input_filename, k, nodes):
     # enumerate the subgraph, cast the string into a character array
     CppEnumerateSubgraphsFromNodes(input_filename.encode('utf-8'), k, &(cpp_nodes[0]), nnodes)
 
+    # free memory
+    del cpp_nodes
+
 
 
 def CombineEnumeratedSubgraphs(input_filename, k):

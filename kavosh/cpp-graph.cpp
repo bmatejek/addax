@@ -342,8 +342,9 @@ Graph *ReadBZ2Graph(const char input_filename[4096])
     // make sure the end is reached
     if (bzerror != BZ_STREAM_END) { fprintf(stderr, "Failed to read %s\n", input_filename); return NULL; }
 
-    // close the file
+    // close files
     BZ2_bzReadClose(&bzerror, bzfd);
+    fclose(fp);
 
     return graph;
 }
