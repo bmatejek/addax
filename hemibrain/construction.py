@@ -5,7 +5,7 @@ import time
 
 
 from addax.data_structures.graph import Graph
-from addax.utilities.dataIO import WriteGraph
+from addax.utilities.dataIO import ReadGraph, WriteGraph
 
 
 
@@ -122,3 +122,28 @@ def ConstructGraphFromHemiBrainCSV():
 
     # print statistics
     print ('Wrote {} in {:0.2f} seconds.'.format(output_filename, time.time() - start_time))
+
+
+
+def MaskHemiBrain(edge_threshold = 5):
+    """
+    Mask out edges with small synaptic weight strength.
+
+    @param edge_threshold: edges less than this threshold are not included in the output graph
+    """
+    input_graph = ReadGraph('graphs/hemi-brain.graph.bz2')
+
+    output_graph = Graph('{}-masked'.format(input_graph.prefix), directed = input_graph.directed, colored = input_graph.colored)
+
+    # add all the vertices to the graph
+    for vertex in input_graph.vertices.values():
+        output_graph.AddVertex(vertex.index, vertex.enumeration_index, vertex.community, vertex.color)
+
+    # add in edges above a certain threshold
+    for edge in input_graph.edges:
+        if edge.weight < edge_threshold: continue
+
+        output_graph.AddEdge(edge.source_index, edge.destination_index, edge.weight)
+
+    # save the output graph
+    WriteGraph(output_graph, 'graphs/hemi-brain-masked.graph.bz2')
