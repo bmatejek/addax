@@ -12,6 +12,7 @@
 static long enumerated_subgraphs = 0;
 static NyGraph *nauty_graph;
 static std::map<std::string, long> certificates;
+static bool community_based = false;
 
 
 
@@ -43,6 +44,9 @@ std::vector<long> Validate(Graph *G,
         std::unordered_set<long> neighbors = G->vertices[v]->neighbors;
         for (std::unordered_set<long>::iterator it2 = neighbors.begin(); it2 != neighbors.end(); ++it2) {
             long w = *it2;
+
+            // only consider neighbors that are in the same community if community based
+            if (community_based && G->vertices[v]->community != G->vertices[w]->community) continue;
 
             // if the root vertex is less than the neighbor and the neighbor has not been visited
             // we use <= rather than < since u is always in visited as the S[0] entry
@@ -378,7 +382,8 @@ void EnumerateSubgraphsFromNode(Graph *G, short k, long u)
     char output_filename[4096];
     // home directory
     passwd *pw = getpwuid(getuid());
-    snprintf(output_filename, 4096, "%s/motifs/temp/%s/motif-size-%03d-node-%016ld-certificates.txt", pw->pw_dir, G->prefix, k, u);
+    if (community_based) snprintf(output_filename, 4096, "%s/motifs/temp/%s-community-based/motif-size-%03d-node-%016ld-certificates.txt", pw->pw_dir, G->prefix, k, u);
+    else snprintf(output_filename, 4096, "%s/motifs/temp/%s/motif-size-%03d-node-%016ld-certificates.txt", pw->pw_dir, G->prefix, k, u);
 
     // open file
     FILE *fp = fopen(output_filename, "w");
@@ -404,7 +409,8 @@ void EnumerateSubgraphsFromNode(Graph *G, short k, long u)
 
     // print timing statistics
     char timing_filename[4096];
-    snprintf(timing_filename, 4096, "%s/motifs/temp/%s/timing/motif-size-%03d-node-%016ld-certificates.txt", pw->pw_dir, G->prefix, k, u);
+    if (community_based) snprintf(timing_filename, 4096, "%s/motifs/temp/%s-community-based/timing/motif-size-%03d-node-%016ld-certificates.txt", pw->pw_dir, G->prefix, k, u);
+    else snprintf(timing_filename, 4096, "%s/motifs/temp/%s/timing/motif-size-%03d-node-%016ld-certificates.txt", pw->pw_dir, G->prefix, k, u);
 
     // open timing file
     FILE *tfp = fopen(timing_filename, "w");
@@ -436,6 +442,13 @@ void EnumerateSubgraphsSequentially(Graph *G, short k)
         long u = it->first;
         EnumerateSubgraphsFromNode(G, k, u);
     }
+}
+
+
+
+void CppSetCommunityBased(bool input_community_based) {
+    // set the community based flag
+    community_based = input_community_based;
 }
 
 
