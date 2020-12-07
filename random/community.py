@@ -22,10 +22,10 @@ def CommunityBasedConfigurationModelRandomGraphs(graph, ngraphs):
         total_time = time.time()
 
         # get a new prefix for the random graph
-        prefix = '{}-{:06d}'.format(graph.prefix, graph_index)
+        prefix = '{}-community-based-configuration-model-random-graph-{:03d}'.format(graph.prefix, graph_index)
 
         # construct a random graph
-        random_graph = Graph(prefix, graph.directed)
+        random_graph = Graph(prefix, graph.directed, graph.colored)
 
         # get the output directory for this random graph
         output_directory = 'random/community-based-configuration-models/graphs'
@@ -34,7 +34,7 @@ def CommunityBasedConfigurationModelRandomGraphs(graph, ngraphs):
 
         # skip if this random graph already exists
         output_filename = '{}/{}.graph.bz2'.format(output_directory, random_graph.prefix)
-        if os.path.exists(output_filename): continue 
+        if os.path.exists(output_filename): continue
 
         # create the degree lists for the in and out half edges
         incoming_degree_list = {}
@@ -65,8 +65,8 @@ def CommunityBasedConfigurationModelRandomGraphs(graph, ngraphs):
             random.shuffle(outgoing_degree_list[(community_one, community_two)])
 
         # create vertices for the random graph
-        for vertex_index in graph.vertices.keys():
-            random_graph.AddVertex(vertex_index)
+        for enumeration_index, vertex_index in enumerate(sorted(graph.vertices.keys())):
+            random_graph.AddVertex(vertex_index, enumeration_index, community = graph.vertices[vertex_index].community, color = graph.vertices[vertex_index].color)
 
         edges = set()
 

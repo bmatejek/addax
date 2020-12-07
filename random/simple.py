@@ -73,10 +73,10 @@ def SimpleConfigurationModelRandomGraphs(graph, ngraphs):
         total_time = time.time()
 
         # get a new prefix for the random graph
-        prefix = '{}-{:06d}'.format(graph.prefix, graph_index)
+        prefix = '{}-simple-configuration-model-random-graph-{:03d}'.format(graph.prefix, graph_index)
 
         # construct a random graph
-        random_graph = Graph(prefix, graph.directed)
+        random_graph = Graph(prefix, graph.directed, graph.colored)
 
         # get the output directory for this random graph
         output_directory = 'random/simple-configuration-model/graphs'
@@ -100,8 +100,8 @@ def SimpleConfigurationModelRandomGraphs(graph, ngraphs):
         random.shuffle(outgoing_degree_list)
 
         # create vertices for the random graph
-        for vertex_index in graph.vertices.keys():
-            random_graph.AddVertex(vertex_index)
+        for enumeration_index, vertex_index in enumerate(sorted(graph.vertices.keys())):
+            random_graph.AddVertex(vertex_index, enumeration_index, community = -1, color = graph.vertices[vertex_index].color)
 
         edges = set()
 
@@ -116,6 +116,11 @@ def SimpleConfigurationModelRandomGraphs(graph, ngraphs):
             random_graph.AddEdge(incoming_degree_list[ie], outgoing_degree_list[ie])
 
             edges.add((incoming_degree_list[ie], outgoing_degree_list[ie]))
+
+        # create the communities for this graph
+        partitions = random_graph.DetectCommunities()
+        for vertex, partition in partitions.items():
+            graph.vertices[vertex].community = partition
 
         # write the graph to file
         WriteGraph(random_graph, output_filename)
