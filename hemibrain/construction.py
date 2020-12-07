@@ -9,16 +9,17 @@ from addax.utilities.dataIO import ReadGraph, WriteGraph
 
 
 
-def ConstructGraphFromHemiBrainCSV():
+def ConstructGraphFromHemiBrainCSV(LOW_EDGE_THRESHOLD = 5):
     """
     Construct a graph object for the hemi brain CSV files
+
+    @param LOW_EDGE_THRESHOLD: two neurons with fewer than this number of synapses are not connected
     """
     # start statistics
     start_time = time.time()
 
-    neurons = {}
+    neurons = set()
     edges = {}
-    synapses_per_region = {}
 
     # open the neuron csv file
     neuron_filename = 'CSVs/HemiBrain/traced-neurons.csv'
@@ -29,11 +30,9 @@ def ConstructGraphFromHemiBrainCSV():
         next(csv_reader, None)
         for row in csv_reader:
             neuron_id = int(row[0])
-
             assert (not neuron_id in neurons)
-
-            # create a region mapping for each neuron
-            neurons[neuron_id] = {}
+            # add this neuron to the list of neurons
+            neurons.add(neuron_id)
 
     # read the synapses by region of interest
     synapse_filename = 'CSVs/HemiBrain/traced-roi-connections.csv'
@@ -45,23 +44,10 @@ def ConstructGraphFromHemiBrainCSV():
         for row in csv_reader:
             pre_neuron_id = int(row[0])
             post_neuron_id = int(row[1])
-            roi = str(row[2])
             weight = int(row[3])
 
             assert (pre_neuron_id in neurons)
             assert (post_neuron_id in neurons)
-
-            # increase the incidence for this region for the pre synaptic neuron
-            if not roi in neurons[pre_neuron_id]:
-                neurons[pre_neuron_id][roi] = weight
-            else:
-                neurons[pre_neuron_id][roi] += weight
-
-            # increase the incidence for this region for the post synaptic neuron
-            if not roi in neurons[post_neuron_id]:
-                neurons[post_neuron_id][roi] = weight
-            else:
-                neurons[post_neuron_id][roi] += weight
 
             # update the connective strength between these two neurons
             if not (pre_neuron_id, post_neuron_id) in edges:
@@ -69,39 +55,27 @@ def ConstructGraphFromHemiBrainCSV():
             else:
                 edges[(pre_neuron_id, post_neuron_id)] += weight
 
-            # update region statistics
-            if not roi in synapses_per_region:
-                synapses_per_region[roi] = weight
-            else:
-                synapses_per_region[roi] += weight
-
-    # determine the region (community/cluster) for each neuron
-    for neuron in neurons.keys():
-        max_region = None
-        max_synaptic_weight = -1
-
-        for region in neurons[neuron].keys():
-            if neurons[neuron][region] > max_synaptic_weight:
-                max_synaptic_weight = neurons[neuron][region]
-                max_region = region
-
-        neurons[neuron] = max_region
-
-    regions_to_communities = {}
-    for index, (region, _) in enumerate(sorted(synapses_per_region.items(), key = lambda x : x[1], reverse = True)):
-        regions_to_communities[region] = index
+    # remove edges that are below a threshold, must first convert keys into a list in python 3
+    pruned_edges = [(pre, post) for (pre, post), weight in edges.items() if weight < LOW_EDGE_THRESHOLD]
+    for (pre, post) in pruned_edges:
+        del edges[(pre, post)]
 
     # construct a directed graph object
     graph = Graph('hemi-brain', directed = True, colored = False)
 
-    # add vertices with the communities
-    for enumeration_index, neuron in enumerate(sorted(neurons.keys())):
+    # add vertices with communities initially at -1
+    for enumeration_index, neuron in enumerate(sorted(neurons)):
         # vertices start with  the default coloring of -1, enumeration_index of -1
-        graph.AddVertex(neuron, enumeration_index, community = regions_to_communities[neurons[neuron]], color = -1)
+        graph.AddVertex(neuron, enumeration_index, community = -1, color = -1)
 
     # add edges with the synaptic weights
     for (pre_neuron_id, post_neuron_id) in edges.keys():
         graph.AddEdge(pre_neuron_id, post_neuron_id, weight = edges[(pre_neuron_id, post_neuron_id)])
+
+    # create the communities for this graph
+    partitions = graph.DetectCommunities()
+    for vertex, partition in partitions.items():
+        graph.vertices[vertex].community = partition
 
     # write the hemibrain graph to disk
     if not os.path.exists('graphs'):
@@ -122,28 +96,3 @@ def ConstructGraphFromHemiBrainCSV():
 
     # print statistics
     print ('Wrote {} in {:0.2f} seconds.'.format(output_filename, time.time() - start_time))
-
-
-
-def MaskHemiBrain(edge_threshold = 5):
-    """
-    Mask out edges with small synaptic weight strength.
-
-    @param edge_threshold: edges less than this threshold are not included in the output graph
-    """
-    input_graph = ReadGraph('graphs/hemi-brain.graph.bz2')
-
-    output_graph = Graph('{}-masked'.format(input_graph.prefix), directed = input_graph.directed, colored = input_graph.colored)
-
-    # add all the vertices to the graph
-    for vertex in input_graph.vertices.values():
-        output_graph.AddVertex(vertex.index, vertex.enumeration_index, vertex.community, vertex.color)
-
-    # add in edges above a certain threshold
-    for edge in input_graph.edges:
-        if edge.weight < edge_threshold: continue
-
-        output_graph.AddEdge(edge.source_index, edge.destination_index, edge.weight)
-
-    # save the output graph
-    WriteGraph(output_graph, 'graphs/hemi-brain-masked.graph.bz2')
