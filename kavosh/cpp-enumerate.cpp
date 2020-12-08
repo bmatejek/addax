@@ -407,6 +407,9 @@ void EnumerateSubgraphsFromNode(Graph *G, short k, long u)
     // free memory
     delete nauty_graph;
 
+    // don't include any I/O time in the total time
+    float total_time = (float) (clock() - start_time) / CLOCKS_PER_SEC;
+
     // print timing statistics
     char timing_filename[4096];
     if (community_based) snprintf(timing_filename, 4096, "%s/motifs/temp/%s-community-based/timing/motif-size-%03d-node-%016ld-certificates.txt", pw->pw_dir, G->prefix, k, u);
@@ -417,8 +420,8 @@ void EnumerateSubgraphsFromNode(Graph *G, short k, long u)
     if (!tfp) { fprintf(stderr, "Failed to write to %s\n", timing_filename); exit(-1); }
 
     // print statistics
-    fprintf(tfp, "Enumerated %ld subgraphs for node %ld in %0.2f seconds.\n", enumerated_subgraphs, u, (float)(clock() - start_time) / CLOCKS_PER_SEC);
-    printf("Enumerated %ld subgraphs for node %ld in %0.2f seconds.\n", enumerated_subgraphs, u, (float)(clock() - start_time) / CLOCKS_PER_SEC);
+    fprintf(tfp, "Enumerated %ld subgraphs for node %ld in %0.2f seconds.\n", enumerated_subgraphs, u, total_time);
+    printf("Enumerated %ld subgraphs for node %ld in %0.2f seconds.\n", enumerated_subgraphs, u, total_time);
 
     // close file
     fclose(tfp);
