@@ -13,7 +13,7 @@ static long enumerated_subgraphs = 0;
 static NyGraph *nauty_graph;
 static std::map<std::string, long> certificates;
 static bool community_based = false;
-
+static FILE *fp = NULL;
 
 
 std::vector<long> Validate(Graph *G,
@@ -378,19 +378,9 @@ void EnumerateSubgraphsFromNode(Graph *G, short k, long u)
 
     // enumerate all subgraphs of size k - 1 that contain the root u
     EnumerateVertex(G, u, S, k - 1, 1, visited);
-    
+
     // don't include any I/O time in the total time
     float total_time = (float) (clock() - start_time) / CLOCKS_PER_SEC;
-
-    char output_filename[4096];
-    // home directory
-    passwd *pw = getpwuid(getuid());
-    if (community_based) snprintf(output_filename, 4096, "%s/motifs/temp/%s-community-based/motif-size-%03d-node-%016ld-certificates.txt", pw->pw_dir, G->prefix, k, u);
-    else snprintf(output_filename, 4096, "%s/motifs/temp/%s/motif-size-%03d-node-%016ld-certificates.txt", pw->pw_dir, G->prefix, k, u);
-
-    // open file
-    FILE *fp = fopen(output_filename, "w");
-    if (!fp) { fprintf(stderr, "Failed to write to %s\n", output_filename); exit(-1); }
 
     for (std::map<std::string, long>::iterator it = certificates.begin(); it != certificates.end(); ++it) {
         const char *certificate = it->first.c_str();
@@ -401,50 +391,14 @@ void EnumerateSubgraphsFromNode(Graph *G, short k, long u)
         fprintf(fp, ": %ld\n", it->second);
     }
 
-    // close file
-    fclose(fp);
-
     // clear the certificates
     certificates.clear();
 
     // free memory
     delete nauty_graph;
 
-    // print timing statistics
-    char timing_filename[4096];
-    if (community_based) snprintf(timing_filename, 4096, "%s/motifs/temp/%s-community-based/timing/motif-size-%03d-node-%016ld-certificates.txt", pw->pw_dir, G->prefix, k, u);
-    else snprintf(timing_filename, 4096, "%s/motifs/temp/%s/timing/motif-size-%03d-node-%016ld-certificates.txt", pw->pw_dir, G->prefix, k, u);
-
-    // open timing file
-    FILE *tfp = fopen(timing_filename, "w");
-    if (!tfp) { fprintf(stderr, "Failed to write to %s\n", timing_filename); exit(-1); }
-
     // print statistics
-    fprintf(tfp, "Enumerated %ld subgraphs for node %ld in %0.2f seconds.\n", enumerated_subgraphs, u, total_time);
-    printf("Enumerated %ld subgraphs for node %ld in %0.2f seconds.\n", enumerated_subgraphs, u, total_time);
-
-    // close file
-    fclose(tfp);
-}
-
-
-
-void EnumerateSubgraphsSequentially(Graph *G, short k)
-{
-    /*
-    Enumerate all subgraphs of a given size in the graph
-
-    @param G: graph
-    @param k: motif size
-
-    Returns a generator that continually gives the next subgraph in the graph
-    */
-
-    // iterate over all vertices in the graph
-    for (std::map<long, Vertex *>::iterator it = G->vertices.begin(); it != G->vertices.end(); ++it) {
-        long u = it->first;
-        EnumerateSubgraphsFromNode(G, k, u);
-    }
+    fprintf(fp, "Enumerated %ld subgraphs for node %ld in %0.2f seconds.\n", enumerated_subgraphs, u, total_time);
 }
 
 
@@ -459,41 +413,61 @@ void CppSetCommunityBased(bool input_community_based) {
 void CppEnumerateSubgraphsSequentially(const char *input_filename, short k)
 {
     // read the input file
-    Graph *graph = ReadBZ2Graph(input_filename);
-    if (!graph) exit(-1);
+    Graph *G = ReadBZ2Graph(input_filename);
+    if (!G) exit(-1);
 
-    EnumerateSubgraphsSequentially(graph, k);
+    // home directory
+    passwd *pw = getpwuid(getuid());
 
-    // free memory
-    delete graph;
-}
+    // create a new file for writing the certificates
+    char output_filename[4096];
+    if (community_based) snprintf(output_filename, 4096, "%s/motifs/temp/%s-community-based/motif-size-%03d-certificates.txt", pw->pw_dir, G->prefix, k);
+    else snprintf(output_filename, 4096, "%s/motifs/temp/%s/motif-size-%03d-certificates.txt", pw->pw_dir, G->prefix, k);
 
+    // open the file
+    fp = fopen(output_filename, "w");
+    if (!fp) { fprintf(stderr, "Failed to open %s\n", output_filename); exit(-1); }
 
-
-void CppEnumerateSubgraphsFromNode(const char *input_filename, short k, long node) {
-    // read the input file
-    Graph *graph = ReadBZ2Graph(input_filename);
-    if (!graph) exit(-1);
-
-    EnumerateSubgraphsFromNode(graph, k, node);
-
-    // free memory
-    delete graph;
-}
-
-
-
-void CppEnumerateSubgraphsFromNodes(const char *input_filename, short k, long *nodes, long nnodes)
-{
-    // read the input file
-    Graph *graph = ReadBZ2Graph(input_filename);
-    if (!graph) exit(-1);
-
-
-    for (long iv = 0; iv < nnodes; ++iv) {
-        EnumerateSubgraphsFromNode(graph, k, nodes[iv]);
+    // iterate over all vertices in the graph
+    for (std::map<long, Vertex *>::iterator it = G->vertices.begin(); it != G->vertices.end(); ++it) {
+        long u = it->first;
+        EnumerateSubgraphsFromNode(G, k, u);
     }
 
+    // close the files
+    fclose(fp);
+
     // free memory
-    delete graph;
+    delete G;
+}
+
+
+
+void CppEnumerateSubgraphsFromNodes(const char *input_filename, short k, long *nodes, long nnodes, long output_suffix)
+{
+    // read the input file
+    Graph *G = ReadBZ2Graph(input_filename);
+    if (!G) exit(-1);
+
+    // home directory
+    passwd *pw = getpwuid(getuid());
+
+    // create a new file for writing the certificates
+    char output_filename[4096];
+    if (community_based) snprintf(output_filename, 4096, "%s/motifs/temp/%s-community-based/motif-size-%03d-output-%08ld-certificates.txt", pw->pw_dir, G->prefix, k, output_suffix);
+    else snprintf(output_filename, 4096, "%s/motifs/temp/%s/motif-size-%03d-output-%08ld-certificates.txt", pw->pw_dir, G->prefix, k, output_suffix);
+
+    // open the file
+    fp = fopen(output_filename, "w");
+    if (!fp) { fprintf(stderr, "Failed to open %s\n", output_filename); exit(-1); }
+
+    for (long iv = 0; iv < nnodes; ++iv) {
+        EnumerateSubgraphsFromNode(G, k, nodes[iv]);
+    }
+
+    // close the files
+    fclose(fp);
+
+    // free memory
+    delete G;
 }

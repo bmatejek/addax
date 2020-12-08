@@ -4,8 +4,7 @@
 
 void CppSetCommunityBased(bool input_community_based);
 void CppEnumerateSubgraphsSequentially(const char *input_filename, short k);
-void CppEnumerateSubgraphsFromNode(const char *input_filename, short k, long node);
-void CppEnumerateSubgraphsFromNodes(const char *input_filename, short k, long *nodes, long nnodes);
+void CppEnumerateSubgraphsFromNodes(const char *input_filename, short k, long *nodes, long nnodes, long output_suffix);
 
 
 
