@@ -378,6 +378,9 @@ void EnumerateSubgraphsFromNode(Graph *G, short k, long u)
 
     // enumerate all subgraphs of size k - 1 that contain the root u
     EnumerateVertex(G, u, S, k - 1, 1, visited);
+    
+    // don't include any I/O time in the total time
+    float total_time = (float) (clock() - start_time) / CLOCKS_PER_SEC;
 
     char output_filename[4096];
     // home directory
@@ -406,9 +409,6 @@ void EnumerateSubgraphsFromNode(Graph *G, short k, long u)
 
     // free memory
     delete nauty_graph;
-
-    // don't include any I/O time in the total time
-    float total_time = (float) (clock() - start_time) / CLOCKS_PER_SEC;
 
     // print timing statistics
     char timing_filename[4096];
