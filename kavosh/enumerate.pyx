@@ -109,6 +109,24 @@ def EnumerateSubgraphsFromNodes(input_filename, k, nodes, output_suffix, communi
 
 
 
+def ParseCertificateFile(input_filename):
+    """
+    Read the input file and validate that it is correct
+
+    @param input_filename: location of the certificates file saved in enumeration
+    """
+    # there are two modes, certificate mode and summary mode
+    certificate_mode = True
+
+    certificates = {}
+    total_nsubgraphs, total_time = 0, 0
+
+
+
+
+
+
+
 def CombineEnumeratedSubgraphs(input_filename, k, community_based = False):
     """
     Combine all of the enumerated subgraphs for a given file and motif size.
@@ -133,38 +151,36 @@ def CombineEnumeratedSubgraphs(input_filename, k, community_based = False):
     # create a dictionary of certificates
     certificates = {}
 
-    total_time = 0
-    total_nsubgraphs = 0
+    # set initial counter variables
+    total_nsubgraphs, total_time = 0, 0
 
     # iterate over all the input files
     for input_filename in input_filenames:
+        # open the output file
         with open(input_filename, 'r') as fd:
-            # iterate over every line
-            for line in fd:
-                # split the line into words
-                words = line.split()
+            for certificate_line in fd:
+                segments = certificate_line.split()
 
-                # timing lines
-                if words[0] == 'Enumerated':
-                    # get the relevant information from the line
-                    nsubgraphs = int(words[1])
-                    vertex = int(words[5])
-                    time = float(words[7])
+                # update the mode that currently exists
+                if segments[0] == 'Enumerated':
+                    nsubgraphs, vertex, time = int(segments[1]), int(segments[5]), float(segments[7])
 
-                    # update the relevant global variables
-                    vertices.remove(vertex)
+                    # update the counter variables that verify correctness
                     total_nsubgraphs += nsubgraphs
                     total_time += time
+                    vertices.remove(vertex)
 
-                # subgraph lines
+                    certificate_mode = False
                 else:
-                    certificate = words[0].strip(':')
-                    nsubgraphs = int(words[1])
+                    certificate, nsubgraphs = segments[0].strip(':'), int(segments[1])
 
-                    if not certificate in certificates:
-                        certificates[certificate] = nsubgraphs
-                    else:
-                        certificates[certificate] += nsubgraphs
+                    # update the certificate information
+                    if not certificate in certificates: certificates[certificate] = nsubgraphs
+                    else: certificates[certificate] += nsubgraphs
+
+                    certificate_mode = True
+
+        assert (not certificate_mode)
 
     # all vertices are found
     assert (not len(vertices))
