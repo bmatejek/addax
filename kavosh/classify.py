@@ -77,18 +77,21 @@ def ParseCertificate(graph, k, certificate):
 
 
 
-def ParseCertificates(input_filename, k):
+def ParseCertificates(input_filename, k, community_based = False):
     """
     Parse the certificates generated for this subgraph
 
     @param input_filename: location for the graph to enumerate
     @parak k: the motif subgraph size to find
+    @param community_based: a boolean flag to only enumerate subgraphs in the same community
     """
     # read the graph
     graph = ReadGraph(input_filename, vertices_only = True)
 
     # read the combined enumerated subgraphs file
-    subgraphs_filename = 'subgraphs/{}/motif-size-{:03d}-certificates.txt'.format(graph.prefix, k)
+    if community_based: subgraphs_filename = 'subgraphs-community-based/{}/motif-size-{:03d}-certificates.txt'.format(graph.prefix, k)
+    else: subgraphs_filename = 'subgraphs/{}/motif-size-{:03d}-certificates.txt'.format(graph.prefix, k)
+
     with open(subgraphs_filename, 'r') as fd:
         # read all of the certificates and enumerated subgraphs
         for subgraph_index, certificate_info in enumerate(fd.readlines()[:-1]):
@@ -102,5 +105,7 @@ def ParseCertificates(input_filename, k):
             A = nx.nx_agraph.to_agraph(nx_graph)
             A.layout(prog='dot')
 
-            output_filename = 'subgraphs/{}/motif-size-{:03d}-motif-{}-found-{}.dot'.format(graph.prefix, k, subgraph_index, nsubgraphs)
+            if community_based: output_filename = 'subgraphs-community-based/{}/motif-size-{:03d}-motif-{}-found-{}.dot'.format(graph.prefix, k, subgraph_index, nsubgraphs)
+            else: output_filename = 'subgraphs/{}/motif-size-{:03d}-motif-{}-found-{}.dot'.format(graph.prefix, k, subgraph_index, nsubgraphs)
+
             A.draw(output_filename)

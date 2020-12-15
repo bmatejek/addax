@@ -77,6 +77,7 @@ def EnumerateSubgraphsSequentially(input_filename, k, community_based = False, w
     print ('Enumerated all subgraphs in {:0.2f} seconds'.format(time.time() - start_time))
 
 
+
 def EnumerateSubgraphsFromNodes(input_filename, k, nodes, output_suffix, community_based = False, write_subgraphs = False):
     """
     Enumerate all subgraphs in the graph starting at the nodes array
@@ -137,9 +138,9 @@ def CombineEnumeratedSubgraphs(input_filename, k, community_based = False):
 
     # iterate over all the input files
     for input_filename in input_filenames:
-        print (input_filename)
         with open(input_filename, 'r') as fd:
-            for line in fd.readlines():
+            # iterate over every line
+            for line in fd:
                 # split the line into words
                 words = line.split()
 
@@ -171,7 +172,7 @@ def CombineEnumeratedSubgraphs(input_filename, k, community_based = False):
     assert (sum(certificates.values()) == total_nsubgraphs)
 
     # create the output directory if it does not exist
-    if community_based: output_directory = 'subgraphs/{}-community-based'.format(graph.prefix)
+    if community_based: output_directory = 'subgraphs-community-based/{}'.format(graph.prefix)
     else: output_directory = 'subgraphs/{}'.format(graph.prefix)
     if not os.path.exists(output_directory):
         os.makedirs(output_directory, exist_ok = True)
