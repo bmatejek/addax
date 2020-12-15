@@ -6,13 +6,14 @@ from addax.utilities.dataIO import ReadGraph
 
 
 
-def ParseCertificate(graph, k, certificate):
+def ParseCertificate(graph, k, certificate, color_mapping = {}):
     """
     Produce a canonical graph from a certificate
 
     @param graph: the input graph from which the certificate was generated
     @param k: motif size
     @param certificate: the certificate from Nauty to parse
+    @param color_mapping: a dictionary that converts color indices to strings
     """
     # this will require substantial debugging and validation for k > 256
     # currently skipped since motifs that size are computationally infeasible
@@ -42,7 +43,8 @@ def ParseCertificate(graph, k, certificate):
     for index in range(k):
         # colored graphs have labels for their colors
         if graph.colored:
-            nx_graph.add_node(index, label = 'Color: {}'.format(vertex_colors[index]))
+            if vertex_colors[index] in color_mapping: nx_graph.add_node(index, label = color_mapping[vertex_colors[index]])
+            else:nx_graph.add_node(index, label = 'Color: {}'.format(vertex_colors[index]))
         else:
             nx_graph.add_node(index)
 
@@ -77,13 +79,14 @@ def ParseCertificate(graph, k, certificate):
 
 
 
-def ParseCertificates(input_filename, k, community_based = False):
+def ParseCertificates(input_filename, k, community_based = False, color_mapping = {}):
     """
     Parse the certificates generated for this subgraph
 
     @param input_filename: location for the graph to enumerate
     @parak k: the motif subgraph size to find
     @param community_based: a boolean flag to only enumerate subgraphs in the same community
+    @param color_mapping: a dictionary that converts color indices to strings
     """
     # read the graph
     graph = ReadGraph(input_filename, vertices_only = True)
@@ -99,7 +102,7 @@ def ParseCertificates(input_filename, k, community_based = False):
             nsubgraphs = int(certificate_info.split(':')[1].strip())
 
             # parse the certificate for this graph
-            nx_graph = ParseCertificate(graph, k, certificate)
+            nx_graph = ParseCertificate(graph, k, certificate, color_mapping)
 
             # create the graph drawing structure
             A = nx.nx_agraph.to_agraph(nx_graph)

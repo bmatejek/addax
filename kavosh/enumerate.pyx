@@ -62,8 +62,6 @@ def EnumerateSubgraphsSequentially(input_filename, k, community_based = False, w
     @param community_based: a boolean flag to only enumerate subgraphs in the same community
     @param write_subgraphs: a boolean flag to write all enumerated subgraphs to disk
     """
-    import time
-    start_time = time.time()
     # create the temp directory if it does not exist
     CreateDirectoryStructure(input_filename, community_based, write_subgraphs)
 
@@ -74,7 +72,6 @@ def EnumerateSubgraphsSequentially(input_filename, k, community_based = False, w
 
     # enumerate the subgraph, cast the string into a character array
     CppEnumerateSubgraphsSequentially(input_filename.encode('utf-8'), k)
-    print ('Enumerated all subgraphs in {:0.2f} seconds'.format(time.time() - start_time))
 
 
 
@@ -106,24 +103,6 @@ def EnumerateSubgraphsFromNodes(input_filename, k, nodes, output_suffix, communi
 
     # free memory
     del cpp_nodes
-
-
-
-def ParseCertificateFile(input_filename):
-    """
-    Read the input file and validate that it is correct
-
-    @param input_filename: location of the certificates file saved in enumeration
-    """
-    # there are two modes, certificate mode and summary mode
-    certificate_mode = True
-
-    certificates = {}
-    total_nsubgraphs, total_time = 0, 0
-
-
-
-
 
 
 
