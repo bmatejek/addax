@@ -9,11 +9,19 @@
 
 
 
-static long enumerated_subgraphs = 0;
-static NyGraph *nauty_graph;
-static std::map<std::string, long> certificates;
-static bool community_based = false;
-static FILE *fp = NULL;
+static long enumerated_subgraphs = 0;              // the number of enumerated subgraphs identified
+static NyGraph *nauty_graph;                       // graph object for canonical labeling
+static std::map<std::string, long> certificates;   // map of certificates
+
+static FILE *certificate_fp = NULL;             // file descriptor to write all certificates
+static FILE *subgraph_fp = NULL;    // file descriptor to write all subgraphs
+
+
+
+// global parameter flags
+static bool COMMUNITY_BASED = false;
+static bool WRITE_SUBGRAPHS = false;
+
 
 
 std::vector<long> Validate(Graph *G,
@@ -46,7 +54,7 @@ std::vector<long> Validate(Graph *G,
             long w = *it2;
 
             // only consider neighbors that are in the same community if community based
-            if (community_based && G->vertices[v]->community != G->vertices[w]->community) continue;
+            if (COMMUNITY_BASED && G->vertices[v]->community != G->vertices[w]->community) continue;
 
             // if the root vertex is less than the neighbor and the neighbor has not been visited
             // we use <= rather than < since u is always in visited as the S[0] entry
@@ -297,6 +305,32 @@ void EnumerateVertex(Graph *G,
             certificates[certificate] += 1;
         }
 
+        // write the subgraph and labeling to disk if required
+        if (WRITE_SUBGRAPHS) {
+            // write the certificate for this subgraph
+            const char *certificate_chars = certificate.c_str();
+
+            for (unsigned long iv = 0; iv < certificate.length(); ++iv) {
+                fprintf(subgraph_fp, "%02x", (unsigned char) certificate_chars[iv]);
+            }
+            // create separation for certificate to vertices
+            fprintf(subgraph_fp, ": ");
+
+            // go through all vertices in the small subgraph
+            for (long iv = 0; iv < k; ++iv) {
+                // as above, the value of int *lab after the call to nauty returns the vertices of
+                // g in order in which they need to be relablled to give the canonical graph
+                // so lab[iv] gives the original index that maps to this location in the canonical
+                // labeling, and index_to_vertex[lab[iv]] gives the original vertex value
+                long vertex = index_to_vertex[nauty_graph->lab[iv]];
+
+                fprintf(subgraph_fp, "%ld ", vertex);
+            }
+
+            // create a new line between this and the next subgraph
+            fprintf(subgraph_fp, "\n");
+        }
+
         // clear the graph
         EMPTYGRAPH(nauty_graph->matrix, nauty_graph->no_setwords, nauty_graph->no_vertices);
 
@@ -386,9 +420,9 @@ void EnumerateSubgraphsFromNode(Graph *G, short k, long u)
         const char *certificate = it->first.c_str();
 
         for (unsigned long iv = 0; iv < it->first.length(); ++iv) {
-            fprintf(fp, "%02x", (unsigned char) certificate[iv]);
+            fprintf(certificate_fp, "%02x", (unsigned char) certificate[iv]);
         }
-        fprintf(fp, ": %ld\n", it->second);
+        fprintf(certificate_fp, ": %ld\n", it->second);
     }
 
     // clear the certificates
@@ -398,14 +432,21 @@ void EnumerateSubgraphsFromNode(Graph *G, short k, long u)
     delete nauty_graph;
 
     // print statistics
-    fprintf(fp, "Enumerated %ld subgraphs for node %ld in %0.2f seconds.\n", enumerated_subgraphs, u, total_time);
+    fprintf(certificate_fp, "Enumerated %ld subgraphs for node %ld in %0.2f seconds.\n", enumerated_subgraphs, u, total_time);
 }
 
 
 
 void CppSetCommunityBased(bool input_community_based) {
     // set the community based flag
-    community_based = input_community_based;
+    COMMUNITY_BASED = input_community_based;
+}
+
+
+
+void CppSetWriteSubgraphs(bool input_write_subgraphs) {
+    // set the write subgraphs flag
+    WRITE_SUBGRAPHS = input_write_subgraphs;
 }
 
 
@@ -421,12 +462,23 @@ void CppEnumerateSubgraphsSequentially(const char *input_filename, short k)
 
     // create a new file for writing the certificates
     char output_filename[4096];
-    if (community_based) snprintf(output_filename, 4096, "%s/motifs/temp/%s-community-based/motif-size-%03d-certificates.txt", pw->pw_dir, G->prefix, k);
-    else snprintf(output_filename, 4096, "%s/motifs/temp/%s/motif-size-%03d-certificates.txt", pw->pw_dir, G->prefix, k);
+    if (COMMUNITY_BASED) snprintf(output_filename, 4096, "%s/motifs/temp-community-based/%s/certificates/motif-size-%03d-certificates.txt", pw->pw_dir, G->prefix, k);
+    else snprintf(output_filename, 4096, "%s/motifs/temp/%s/certificates/motif-size-%03d-certificates.txt", pw->pw_dir, G->prefix, k);
 
     // open the file
-    fp = fopen(output_filename, "w");
-    if (!fp) { fprintf(stderr, "Failed to open %s\n", output_filename); exit(-1); }
+    certificate_fp = fopen(output_filename, "w");
+    if (!certificate_fp) { fprintf(stderr, "Failed to open %s\n", output_filename); exit(-1); }
+
+    // create a new file for writing subgraphs if needed
+    if (WRITE_SUBGRAPHS) {
+        char subgraph_filename[4096];
+        if (COMMUNITY_BASED) snprintf(subgraph_filename, 4096, "%s/motifs/temp-community-based/%s/subgraphs/motif-size-%03d-subgraphs.txt", pw->pw_dir, G->prefix, k);
+        else snprintf(subgraph_filename, 4096, "%s/motifs/temp/%s/subgraphs/motif-size-%03d-subgraphs.txt", pw->pw_dir, G->prefix, k);
+
+        // open the file
+        subgraph_fp = fopen(subgraph_filename, "w");
+        if (!subgraph_fp) { fprintf(stderr, "Failed to open %s\n", subgraph_filename); exit(-1); }
+    }
 
     // iterate over all vertices in the graph
     for (std::map<long, Vertex *>::iterator it = G->vertices.begin(); it != G->vertices.end(); ++it) {
@@ -435,7 +487,8 @@ void CppEnumerateSubgraphsSequentially(const char *input_filename, short k)
     }
 
     // close the files
-    fclose(fp);
+    fclose(certificate_fp);
+    if (WRITE_SUBGRAPHS) fclose(subgraph_fp);
 
     // free memory
     delete G;
@@ -454,19 +507,31 @@ void CppEnumerateSubgraphsFromNodes(const char *input_filename, short k, long *n
 
     // create a new file for writing the certificates
     char output_filename[4096];
-    if (community_based) snprintf(output_filename, 4096, "%s/motifs/temp/%s-community-based/motif-size-%03d-output-%08ld-certificates.txt", pw->pw_dir, G->prefix, k, output_suffix);
-    else snprintf(output_filename, 4096, "%s/motifs/temp/%s/motif-size-%03d-output-%08ld-certificates.txt", pw->pw_dir, G->prefix, k, output_suffix);
+    if (COMMUNITY_BASED) snprintf(output_filename, 4096, "%s/motifs/temp-community-based/%s/certificates/motif-size-%03d-output-%08ld-certificates.txt", pw->pw_dir, G->prefix, k, output_suffix);
+    else snprintf(output_filename, 4096, "%s/motifs/temp/%s/certificates/motif-size-%03d-output-%08ld-certificates.txt", pw->pw_dir, G->prefix, k, output_suffix);
 
     // open the file
-    fp = fopen(output_filename, "w");
-    if (!fp) { fprintf(stderr, "Failed to open %s\n", output_filename); exit(-1); }
+    certificate_fp = fopen(output_filename, "w");
+    if (!certificate_fp) { fprintf(stderr, "Failed to open %s\n", output_filename); exit(-1); }
+
+    // create a new file for writing subgraphs if needed
+    if (WRITE_SUBGRAPHS) {
+        char subgraph_filename[4096];
+        if (COMMUNITY_BASED) snprintf(subgraph_filename, 4096, "%s/motifs/temp-community-based/%s/subgraphs/motif-size-%03d-output-%08ld-subgraphs.txt", pw->pw_dir, G->prefix, k, output_suffix);
+        else snprintf(subgraph_filename, 4096, "%s/motifs/temp/%s/subgraphs/motif-size-%03d-output-%08ld-subgraphs.txt", pw->pw_dir, G->prefix, k, output_suffix);
+
+        // open the file
+        subgraph_fp = fopen(subgraph_filename, "w");
+        if (!subgraph_fp) { fprintf(stderr, "Failed to open %s\n", subgraph_filename); exit(-1); }
+    }
 
     for (long iv = 0; iv < nnodes; ++iv) {
         EnumerateSubgraphsFromNode(G, k, nodes[iv]);
     }
 
     // close the files
-    fclose(fp);
+    fclose(certificate_fp);
+    if (WRITE_SUBGRAPHS) fclose(subgraph_fp);
 
     // free memory
     delete G;

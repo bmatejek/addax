@@ -32,7 +32,7 @@ def ParseCertificate(graph, k, certificate):
         # convert the vertex bytes (in hex) to base 10 integer
         vertex_colors = [int(coloring[16 * iv: 16 * (iv + 1)], 16) for iv in range(k)]
 
-    # create a new netwokx graph object
+    # create a new networkx graph object
     if graph.directed:
         nx_graph = nx.DiGraph()
     else:
@@ -40,7 +40,7 @@ def ParseCertificate(graph, k, certificate):
 
     # add a vertex for each of the k nodes in the subgraph
     for index in range(k):
-        # colored graphs have labels for their colors 
+        # colored graphs have labels for their colors
         if graph.colored:
             nx_graph.add_node(index, label = 'Color: {}'.format(vertex_colors[index]))
         else:
@@ -88,10 +88,10 @@ def ParseCertificates(input_filename, k):
     graph = ReadGraph(input_filename, vertices_only = True)
 
     # read the combined enumerated subgraphs file
-    subgraphs_filename = 'subgraphs/{}/motif-size-{:03d}.txt'.format(graph.prefix, k)
+    subgraphs_filename = 'subgraphs/{}/motif-size-{:03d}-certificates.txt'.format(graph.prefix, k)
     with open(subgraphs_filename, 'r') as fd:
         # read all of the certificates and enumerated subgraphs
-        for subgraph_index, certificate_info in enumerate(fd.readlines()):
+        for subgraph_index, certificate_info in enumerate(fd.readlines()[:-1]):
             certificate = certificate_info.split(':')[0].strip()
             nsubgraphs = int(certificate_info.split(':')[1].strip())
 
