@@ -99,7 +99,7 @@ class Graph(object):
         """
         return len(self.edges)
 
-    def DetectCommunities(self, output_filename = None):
+    def DetectCommunities(self):
         """
         Returns a list of communities based on the Louvain algorithm
         """
@@ -128,13 +128,6 @@ class Graph(object):
 
         # determine communities in the graph
         partition = community_louvain.best_partition(G)
-
-        # write the partition to file
-        if not output_filename == None:
-            with open(output_filename, 'wb') as fd:
-                fd.write(struct.pack('q', self.NVertices()))
-                for (neuron_id, community) in partition.items():
-                    fd.write(struct.pack('qq', neuron_id, community))
 
         # get a list of communities using the Louvain algorithm
         return partition
