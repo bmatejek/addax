@@ -31,7 +31,7 @@ class Graph(object):
         # the edge set contains a list of (source, destination) indices
         self.edge_set = set()
 
-    def AddVertex(self, index, enumeration_index, community = -1, color = -1):
+    def AddVertex(self, index, enumeration_index = -1, community = -1, color = -1):
         """
         Add a vertex to the graph
 
@@ -42,6 +42,9 @@ class Graph(object):
         """
         # vertices must have unique indices
         assert (not index in self.vertices)
+
+        # if there is no enumeration index, the index equals the number of vertices seen
+        if enumeration_index == -1: enumeration_index = len(self.vertices)
 
         # create the vertex and add it to the mapping
         vertex = self.Vertex(self, index, enumeration_index, community, color)
