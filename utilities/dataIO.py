@@ -145,7 +145,7 @@ def WriteGraph(graph, output_filename):
         compressed_graph.append(compressor.compress(struct.pack('qqqq', vertex.index, vertex.enumeration_index, vertex.community, vertex.color)))
 
     # write all of the edges and their attributes
-    for edge in graph.edges:
+    for edge in graph.edges.values():
         compressed_graph.append(compressor.compress(struct.pack('qqdq', edge.source_index, edge.destination_index, edge.weight, edge.color)))
 
     # write the vertex types

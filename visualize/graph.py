@@ -5,7 +5,7 @@ import networkx as nx
 def VisualizeGraph(graph, output_filename):
     """
     Visualize the graph using networkx and output the result in a .dot file
-    
+
     @param graph: the graph data structure to visualize
     @param output_filename: the file to save the visualized results
     """
@@ -20,7 +20,7 @@ def VisualizeGraph(graph, output_filename):
         viz_graph.add_node(index)
 
     # iterate over all edges in the graph
-    for edge in graph.edges:
+    for edge in graph.edges.values():
         # get the source and destination for each edge in the graph
         viz_graph.add_edge(edge.source_index, edge.destination_index)
 

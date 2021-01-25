@@ -29,9 +29,7 @@ class Graph(object):
         # vertices is a mapping from the vertex index to the vertex object
         self.vertices = {}
         # edges is a list of edges with sources, destinations, and weights
-        self.edges = []
-        # the edge set contains a list of (source, destination) indices
-        self.edge_set = set()
+        self.edges = {}
         # get a mapping from vertex/edge colors to strings
         self.vertex_type_mapping = {}
         self.edge_type_mapping = {}
@@ -79,15 +77,10 @@ class Graph(object):
 
         # create the edge and add it to the list of edges
         edge = self.Edge(self, source_index, destination_index, weight, color)
-        self.edges.append(edge)
 
-        # add to the set of edges in the graph for easier look up
-        if self.directed:
-            self.edge_set.add((source_index, destination_index))
-        else:
-            # directed edges go in both directions
-            self.edge_set.add((source_index, destination_index))
-            self.edge_set.add((destination_index, source_index))
+        # if the graph is undirected, add both directions to the dictionary
+        self.edges[(source_index, destination_index)] = edge
+        if not self.directed: self.edges[(destination_index, source_index)] = edge 
 
         # add the edge to both vertices
         self.vertices[source_index].AddEdge(edge)
