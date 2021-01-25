@@ -85,7 +85,7 @@ def ConstructGraphFromHemiBrainCSV(MODERATE_THRESHOLD = 4, STRONG_THRESHOLD = 10
     for (pre_neuron_id, post_neuron_id) in edges.keys():
         # edges between the MODERATE_THRESHOLD and STRONG_THRESHOLD have moderate strength
         # edges with STRONG_THRESHOLD or more synapses are strongly connected
-        has_moderate_strength = (edges[(pre_neuron_id, post_neuron_id)] < STRONG_THRESHOLD)
+        has_moderate_strength = int(edges[(pre_neuron_id, post_neuron_id)] < STRONG_THRESHOLD)
         graph.AddEdge(pre_neuron_id, post_neuron_id, weight = edges[(pre_neuron_id, post_neuron_id)], color = has_moderate_strength)
 
     # reverse the type mapping to go from index to name
@@ -117,7 +117,7 @@ def ConstructGraphFromHemiBrainCSV(MODERATE_THRESHOLD = 4, STRONG_THRESHOLD = 10
 
     # write the condensed CSV neuron and edge files
     with open('CSVs/HemiBrain/condensed-neurons.csv', 'w') as fd:
-        fd.write('Neuron ID,Community\n')
+        fd.write('Neuron ID,Community,Color Index,Color Name\n')
         for neuron in graph.vertices.values():
             fd.write('{},{},{},{}\n'.format(neuron.index, neuron.community, neuron.color, graph.vertex_type_mapping[neuron.color]))
 
@@ -125,7 +125,7 @@ def ConstructGraphFromHemiBrainCSV(MODERATE_THRESHOLD = 4, STRONG_THRESHOLD = 10
     nmoderate_connections = 0
 
     with open('CSVs/HemiBrain/condensed-edges.csv', 'w') as fd:
-        fd.write('Pre Synaptic Neuron ID,Post Synaptic Neuron ID,Weight\n')
+        fd.write('Pre Synaptic Neuron ID,Post Synaptic Neuron ID,Weight,Color Index,Color Name,\n')
         for edge in graph.edges:
             fd.write('{},{},{},{},{}\n'.format(edge.source_index, edge.destination_index, edge.weight, edge.color, graph.edge_type_mapping[edge.color]))
 
