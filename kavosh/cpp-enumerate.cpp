@@ -19,6 +19,8 @@ static FILE *subgraph_fp = NULL;    // file descriptor to write all subgraphs
 
 
 // global parameter flags
+static bool VERTEX_COLORED = false;
+static bool EDGE_COLORED = false;
 static bool COMMUNITY_BASED = false;
 static bool WRITE_SUBGRAPHS = false;
 
@@ -190,7 +192,7 @@ void EnumerateVertex(Graph *G,
                 index_to_vertex[index] = *it;
 
 
-                if (G->colored) {
+                if (VERTEX_COLORED) {
                     // get the color for this vertex
                     long color = G->vertices[*it]->color;
 
@@ -229,7 +231,7 @@ void EnumerateVertex(Graph *G,
         */
 
         // set *ptn and *lab for graph coloring
-        if (G->colored) {
+        if (VERTEX_COLORED) {
             // keep a linear index for the permutation arrays (lab, ptn)
             long permutation_index = 0;
 
@@ -277,7 +279,7 @@ void EnumerateVertex(Graph *G,
         }
 
         // add the vertex coloring to the certificate
-        if (G->colored) {
+        if (VERTEX_COLORED) {
             // go through all vertices in the small subgraph
             for (long iv = 0; iv < k; ++iv) {
                 // the value of int *lab after the call to nauty returns the vertices of
@@ -293,6 +295,32 @@ void EnumerateVertex(Graph *G,
                     // then remove the bits lower order than this
                     unsigned char byte = (color << 8 * ib) >> 56;
                     certificate.push_back(byte);
+                }
+            }
+        }
+        // add the edge coloring to the certificate
+        if (EDGE_COLORED) {
+            // go through all pairs of vertices in the small subgraph
+            for (long iv1 = 0; iv1 < k; ++iv1) {
+                long vertex_one = index_to_vertex[nauty_graph->lab[iv1]];
+
+                for (long iv2 = 0; iv2 < k; ++iv2) {
+                    long vertex_two = index_to_vertex[nauty_graph->lab[iv2]];
+
+                    // get the edge color from vertex_one to vertex_two (default = -1)
+                    long color = -1;
+                    if (G->edges.find(std::pair<long, long>(vertex_one, vertex_two)) != G->edges.end()) {
+                        color = G->edges[std::pair<long, long>(vertex_one, vertex_two)]->color;
+                    }
+                    
+                    // convert the long into bytes
+                    short nbytes_per_long = 8;
+                    for (long ib = 0; ib < nbytes_per_long; ++ib) {
+                        // first remove the bits in the previous bytes
+                        // then remove the bits lower order than this
+                        unsigned char byte = (color << 8 * ib) >> 56;
+                        certificate.push_back(byte);
+                    }
                 }
             }
         }
@@ -391,7 +419,9 @@ void EnumerateSubgraphsFromNode(Graph *G, short k, long u)
     enumerated_subgraphs = 0;
 
     // create an empty NyGraph (Nauty Graph) data structure
-    nauty_graph = new NyGraph(k, G->colored);
+    if (VERTEX_COLORED) nauty_graph = new NyGraph(k, true);
+    else nauty_graph = new NyGraph(k, false);
+
 
     // create an empty certificates dictionary
     certificates = std::map<std::string, long>();
@@ -437,6 +467,20 @@ void EnumerateSubgraphsFromNode(Graph *G, short k, long u)
 
 
 
+void CppSetVertexColored(bool input_vertex_colored) {
+    // set the vertex colored flag
+    VERTEX_COLORED = input_vertex_colored;
+}
+
+
+
+void CppSetEdgeColored(bool input_edge_colored) {
+    // set the edge colored flag
+    EDGE_COLORED = input_edge_colored;
+}
+
+
+
 void CppSetCommunityBased(bool input_community_based) {
     // set the community based flag
     COMMUNITY_BASED = input_community_based;
@@ -451,7 +495,7 @@ void CppSetWriteSubgraphs(bool input_write_subgraphs) {
 
 
 
-void CppEnumerateSubgraphsSequentially(const char *input_filename, short k)
+void CppEnumerateSubgraphsSequentially(const char *input_filename, const char *temp_directory, short k)
 {
     // read the input file
     Graph *G = ReadBZ2Graph(input_filename);
@@ -462,8 +506,7 @@ void CppEnumerateSubgraphsSequentially(const char *input_filename, short k)
 
     // create a new file for writing the certificates
     char output_filename[4096];
-    if (COMMUNITY_BASED) snprintf(output_filename, 4096, "%s/motifs/temp-community-based/%s/certificates/motif-size-%03d-certificates.txt", pw->pw_dir, G->prefix, k);
-    else snprintf(output_filename, 4096, "%s/motifs/temp/%s/certificates/motif-size-%03d-certificates.txt", pw->pw_dir, G->prefix, k);
+    snprintf(output_filename, 4096, "%s/motifs/%s/certificates/motif-size-%03d-certificates.txt", pw->pw_dir, temp_directory, k);
 
     // open the file
     certificate_fp = fopen(output_filename, "w");
@@ -472,8 +515,7 @@ void CppEnumerateSubgraphsSequentially(const char *input_filename, short k)
     // create a new file for writing subgraphs if needed
     if (WRITE_SUBGRAPHS) {
         char subgraph_filename[4096];
-        if (COMMUNITY_BASED) snprintf(subgraph_filename, 4096, "%s/motifs/temp-community-based/%s/subgraphs/motif-size-%03d-subgraphs.txt", pw->pw_dir, G->prefix, k);
-        else snprintf(subgraph_filename, 4096, "%s/motifs/temp/%s/subgraphs/motif-size-%03d-subgraphs.txt", pw->pw_dir, G->prefix, k);
+        snprintf(subgraph_filename, 4096, "%s/motifs/%s/subgraphs/motif-size-%03d-subgraphs.txt", pw->pw_dir, temp_directory, k);
 
         // open the file
         subgraph_fp = fopen(subgraph_filename, "w");
@@ -496,7 +538,7 @@ void CppEnumerateSubgraphsSequentially(const char *input_filename, short k)
 
 
 
-void CppEnumerateSubgraphsFromNodes(const char *input_filename, short k, long *nodes, long nnodes, long output_suffix)
+void CppEnumerateSubgraphsFromNodes(const char *input_filename, const char *temp_directory, short k, long *nodes, long nnodes, long output_suffix)
 {
     // read the input file
     Graph *G = ReadBZ2Graph(input_filename);
@@ -507,8 +549,7 @@ void CppEnumerateSubgraphsFromNodes(const char *input_filename, short k, long *n
 
     // create a new file for writing the certificates
     char output_filename[4096];
-    if (COMMUNITY_BASED) snprintf(output_filename, 4096, "%s/motifs/temp-community-based/%s/certificates/motif-size-%03d-output-%08ld-certificates.txt", pw->pw_dir, G->prefix, k, output_suffix);
-    else snprintf(output_filename, 4096, "%s/motifs/temp/%s/certificates/motif-size-%03d-output-%08ld-certificates.txt", pw->pw_dir, G->prefix, k, output_suffix);
+    snprintf(output_filename, 4096, "%s/motifs/%s/certificates/motif-size-%03d-output-%08ld-certificates.txt", pw->pw_dir, temp_directory, k, output_suffix);
 
     // open the file
     certificate_fp = fopen(output_filename, "w");
@@ -517,8 +558,7 @@ void CppEnumerateSubgraphsFromNodes(const char *input_filename, short k, long *n
     // create a new file for writing subgraphs if needed
     if (WRITE_SUBGRAPHS) {
         char subgraph_filename[4096];
-        if (COMMUNITY_BASED) snprintf(subgraph_filename, 4096, "%s/motifs/temp-community-based/%s/subgraphs/motif-size-%03d-output-%08ld-subgraphs.txt", pw->pw_dir, G->prefix, k, output_suffix);
-        else snprintf(subgraph_filename, 4096, "%s/motifs/temp/%s/subgraphs/motif-size-%03d-output-%08ld-subgraphs.txt", pw->pw_dir, G->prefix, k, output_suffix);
+        snprintf(subgraph_filename, 4096, "%s/motifs/%s/subgraphs/motif-size-%03d-output-%08ld-subgraphs.txt", pw->pw_dir, temp_directory, k, output_suffix);
 
         // open the file
         subgraph_fp = fopen(subgraph_filename, "w");

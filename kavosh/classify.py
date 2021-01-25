@@ -2,11 +2,12 @@ import networkx as nx
 
 
 
+from addax.kavosh.enumerate import CreateDirectoryStructure
 from addax.utilities.dataIO import ReadGraph
 
 
 
-def ParseCertificate(graph, k, certificate, color_mapping = {}):
+def ParseCertificate(graph, k, certificate, vertex_colored, edge_colored):
     """
     Produce a canonical graph from a certificate
 
@@ -23,8 +24,19 @@ def ParseCertificate(graph, k, certificate, color_mapping = {}):
     # each vertex gets a certain number of bits in the certificate that contain the adjacency
     # matrix for that vertex. The number of bits is determined by the no_setwords in pynauty. This variable
     # matches the number of 64-bit words (on a 64-bit system) needed to fit all vertices.
-    # for colored graphs we also add on 64 bits for each node in the subgraph for coloring
-    if graph.colored:
+    # for vertex colored graphs we also add on 64 bits for each node in the subgraph for vertex coloring
+    # for edge colored graph we also add on 64 bits for each (potential edge) in the subgraph for edge coloring
+    if edge_colored:
+        # if the graph is colored, there are 16 characters per edge
+        # rest of string represents the canonical labeling and vertex coloring
+        coloring = certificate[-16 * k * k:]
+        certificate = certificate[:-16 * k * k]
+
+        # convert the vertex bytes (in hex) to base 10 integer
+        edge_colors = [int(coloring[16 * iv:16 * (iv + 1)], 16) for iv in range(k * k)]
+
+
+    if vertex_colored:
         # if the graph is colored, there are 16 characters per vertex
         # rest of the string represents the canonical labeling
         coloring = certificate[-16 * k:]
@@ -42,9 +54,9 @@ def ParseCertificate(graph, k, certificate, color_mapping = {}):
     # add a vertex for each of the k nodes in the subgraph
     for index in range(k):
         # colored graphs have labels for their colors
-        if graph.colored:
-            if vertex_colors[index] in color_mapping: nx_graph.add_node(index, label = color_mapping[vertex_colors[index]])
-            else:nx_graph.add_node(index, label = 'Color: {}'.format(vertex_colors[index]))
+        if vertex_colored:
+            if vertex_colors[index] in color_mapping: nx_graph.add_node(index, label = graph.vertex_type_mapping[vertex_colors[index]])
+            else: nx_graph.add_node(index, label = 'Color: {}'.format(vertex_colors[index]))
         else:
             nx_graph.add_node(index)
 
@@ -73,42 +85,65 @@ def ParseCertificate(graph, k, certificate, color_mapping = {}):
                 if bit:
                     # determine the neighbor by the byte and bit offset
                     neighbor_vertex = 8 * (bytes_per_vertex - byte_offset - 1) + bit_offset
-                    nx_graph.add_edge(vertex, neighbor_vertex)
+                    # if there is no edge coloring, we can just add a simple edge
+                    if not edge_colored:
+                        nx_graph.add_edge(vertex, neighbor_vertex)
+                    else:
+                        # create a coloringn for edges
+                        color = edge_colors[vertex * k + neighbor_vertex]
+
+                        # currently colors are based on edge strength (0 = moderate, 1 = strong)
+                        nx_graph.add_edge(vertex, neighbor_vertex, penwidth = 2 * color + 1)
 
     return nx_graph
 
 
 
-def ParseCertificates(input_filename, k, community_based = False, color_mapping = {}):
+def ParseCertificates(input_filename, k, vertex_colored = False, edge_colored = False, community_based = False):
     """
     Parse the certificates generated for this subgraph
 
     @param input_filename: location for the graph to enumerate
     @parak k: the motif subgraph size to find
+    @param vertex_colored: a boolean flag to allow for vertex colors
+    @param edge_colored: a boolean flag to allow for edge colors
     @param community_based: a boolean flag to only enumerate subgraphs in the same community
-    @param color_mapping: a dictionary that converts color indices to strings
     """
     # read the graph
     graph = ReadGraph(input_filename, vertices_only = True)
 
+    # get the temp directory
+    temp_directory = CreateDirectoryStructure(input_filename, vertex_colored, edge_colored, community_based, False)
+
+    # get the input directory
+    input_directory = 'subgraphs/{}'.format('/'.join(temp_directory.split('/')[1:]))
+
     # read the combined enumerated subgraphs file
-    if community_based: subgraphs_filename = 'subgraphs-community-based/{}/motif-size-{:03d}-certificates.txt'.format(graph.prefix, k)
-    else: subgraphs_filename = 'subgraphs/{}/motif-size-{:03d}-certificates.txt'.format(graph.prefix, k)
+    subgraphs_filename = '{}/motif-size-{:03d}-certificates.txt'.format(input_directory, k)
 
     with open(subgraphs_filename, 'r') as fd:
+        # get the number of unique subgraphs found
+        unique_subgraphs = fd.readline().split()[1]
+        # get the number of digits needed to encode the largest numbered subgraph in base 10
+        index_digits_needed = len(unique_subgraphs)
+        # get the number of digits needed to encode the most enumerate subgraph
+        subgraph_digits_needed = -1
+
         # read all of the certificates and enumerated subgraphs
         for subgraph_index, certificate_info in enumerate(fd.readlines()[:-1]):
             certificate = certificate_info.split(':')[0].strip()
             nsubgraphs = int(certificate_info.split(':')[1].strip())
 
+            if subgraph_digits_needed == -1: subgraph_digits_needed = len(str(nsubgraphs))
+
             # parse the certificate for this graph
-            nx_graph = ParseCertificate(graph, k, certificate, color_mapping)
+            nx_graph = ParseCertificate(graph, k, certificate, vertex_colored, edge_colored)
 
             # create the graph drawing structure
             A = nx.nx_agraph.to_agraph(nx_graph)
+
             A.layout(prog='dot')
 
-            if community_based: output_filename = 'subgraphs-community-based/{}/motif-size-{:03d}-motif-{}-found-{}.dot'.format(graph.prefix, k, subgraph_index, nsubgraphs)
-            else: output_filename = 'subgraphs/{}/motif-size-{:03d}-motif-{}-found-{}.dot'.format(graph.prefix, k, subgraph_index, nsubgraphs)
-
+            # output this enumerate subgraph
+            output_filename = '{}/motif-size-{:03d}-motif-{:0{}d}-found-{:0{}d}.dot'.format(input_directory, k, subgraph_index, index_digits_needed, nsubgraphs, subgraph_digits_needed)
             A.draw(output_filename)

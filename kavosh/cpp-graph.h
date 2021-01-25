@@ -54,7 +54,7 @@ public:
 class Edge {
 public:
     // constructors/destructors
-    Edge(Graph *graph, long source_index, long destination_index, double weight);
+    Edge(Graph *graph, long source_index, long destination_index, double weight, long color);
     ~Edge();
 
     // instance variables
@@ -62,28 +62,21 @@ public:
     long source_index;
     long destination_index;
     double weight;
+    long color;
 };
 
-
-
-struct edge_pair_hash
-{	std::size_t operator() (const std::pair<long, long> &pair) const
-	{
-		return std::hash<long>()(pair.first) ^ std::hash<long>()(pair.second);
-	}
-};
 
 
 
 class Graph {
 public:
     // constructors/destructors
-    Graph(const char input_prefix[128], bool input_directed, bool input_colored);
+    Graph(const char input_prefix[128], bool input_directed, bool input_vertex_colored, bool input_edge_colored);
     ~Graph();
 
     // modifying functions
     void AddVertex(long index, long enumeration_index, long community = -1, long color = -1);
-    void AddEdge(long source_index, long destination_index, double weight = -1);
+    void AddEdge(long source_index, long destination_index, double weight = -1, long color = -1);
 
     // attribute functions
     long NVertices(void);
@@ -92,10 +85,10 @@ public:
     // instance variables
     char prefix[128];
     bool directed;
-    bool colored;
+    bool vertex_colored;
+    bool edge_colored;
     std::map<long, Vertex *> vertices;
-    std::vector<Edge *> edges;
-    std::unordered_set<std::pair<long, long>, edge_pair_hash> edge_set;
+    std::map<std::pair<long, long>, Edge *> edges;
 };
 
 

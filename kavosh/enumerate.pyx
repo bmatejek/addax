@@ -19,63 +19,90 @@ from addax.utilities.dataIO import ReadGraph, ReadPrefix
 
 
 cdef extern from 'cpp-enumerate.h':
+    void CppSetVertexColored(bool vertex_colored)
+    void CppSetEdgeColored(bool edge_colored)
     void CppSetCommunityBased(bool community_based)
     void CppSetWriteSubgraphs(bool write_subgraphs)
-    void CppEnumerateSubgraphsSequentially(const char *prefix, short k)
-    void CppEnumerateSubgraphsFromNodes(const char *prefix, short k, long *nodes, long nnodes, long output_suffix)
+    void CppEnumerateSubgraphsSequentially(const char *input_filename, const char *temp_directory, short k)
+    void CppEnumerateSubgraphsFromNodes(const char *input_filename, const char *temp_directory, short k, long *nodes, long nnodes, long output_suffix)
 
 
 
-def CreateDirectoryStructure(input_filename, community_based, write_subgraphs):
+def CreateDirectoryStructure(input_filename, vertex_colored, edge_colored, community_based, write_subgraphs):
     """
-    Create the directory structure for enumeration
+    Create the directory structure for enumeration. Return the tmp directory name.
 
     @param input_filename: location for the graph to enumerate
+    @param vertex_colored: a boolean flag to allow for vertex colors
+    @param edge_colored: a boolean flag to allow for edge colors
     @param community_based: a boolean flag to only enumerate subgraphs in the same community
     @param write_subgraphs: a boolean flag to write all enumerated subgraphs to disk
     """
-    # is this directory community based
-    if community_based: tmp_directory = 'temp-community-based'
-    else: tmp_directory = 'temp'
+    # is this enumeration community based
+    if community_based: community_suffix = 'local'
+    else: community_suffix = 'global'
+    # is this enumeration vertex colored
+    if vertex_colored: vertex_suffix = 'vertex-colored'
+    else: vertex_suffix = 'vertex-agnostic'
+    # is this enumeration edge colored
+    if edge_colored: edge_suffix = 'edge-colored'
+    else: edge_suffix = 'edge-agnostic'
+
 
     # get the prefix for the dataset
     prefix = ReadPrefix(input_filename)
 
+    temp_directory = 'temp/{}/{}/{}/{}'.format(prefix, community_suffix, vertex_suffix, edge_suffix)
+
     # create the certificate and subgraph directory
-    certificate_directory = '{}/{}/certificates'.format(tmp_directory, prefix)
+    certificate_directory = '{}/certificates'.format(temp_directory)
     if not os.path.exists(certificate_directory):
         os.makedirs(certificate_directory, exist_ok = True)
 
     if write_subgraphs:
-        subgraphs_directory = '{}/{}/subgraphs'.format(tmp_directory, prefix)
+        subgraphs_directory = '{}/subgraphs'.format(temp_directory)
         if not os.path.exists(subgraphs_directory):
             os.makedirs(subgraphs_directory, exist_ok = True)
 
+    return temp_directory
 
 
-def EnumerateSubgraphsSequentially(input_filename, k, community_based = False, write_subgraphs = False):
+
+def EnumerateSubgraphsSequentially(input_filename, k, vertex_colored = False, edge_colored = False, community_based = False, write_subgraphs = False):
     """
     Enumerate all subgraphs in the graph specified by input_filename
 
     @param input_filename: location for the graph to enumerate
     @parak k: the motif subgraph size to find
+    @param vertex_colored: a boolean flag to allow for vertex colors
+    @param edge_colored: a boolean flag to allow for edge colors
     @param community_based: a boolean flag to only enumerate subgraphs in the same community
     @param write_subgraphs: a boolean flag to write all enumerated subgraphs to disk
     """
-    # create the temp directory if it does not exist
-    CreateDirectoryStructure(input_filename, community_based, write_subgraphs)
+    # make sure that if coloring is request, the graph is colored
+    graph = ReadGraph(input_filename, header_only = True)
 
+    if vertex_colored: assert (graph.vertex_colored)
+    if edge_colored: assert (graph.edge_colored)
+
+    # create the temp directory if it does not exist
+    temp_directory = CreateDirectoryStructure(input_filename, vertex_colored, edge_colored, community_based, write_subgraphs)
+
+    # set the vertex color flag
+    CppSetVertexColored(vertex_colored)
+    # set the edge color flag
+    CppSetEdgeColored(edge_colored)
     # set the community based flag
     CppSetCommunityBased(community_based)
     # set the write subgraphs flag
     CppSetWriteSubgraphs(write_subgraphs)
 
     # enumerate the subgraph, cast the string into a character array
-    CppEnumerateSubgraphsSequentially(input_filename.encode('utf-8'), k)
+    CppEnumerateSubgraphsSequentially(input_filename.encode('utf-8'), temp_directory.encode('utf-8'), k)
 
 
 
-def EnumerateSubgraphsFromNodes(input_filename, k, nodes, output_suffix, community_based = False, write_subgraphs = False):
+def EnumerateSubgraphsFromNodes(input_filename, k, nodes, output_suffix, vertex_colored = False, edge_colored = False, community_based = False, write_subgraphs = False):
     """
     Enumerate all subgraphs in the graph starting at the nodes array
 
@@ -83,12 +110,24 @@ def EnumerateSubgraphsFromNodes(input_filename, k, nodes, output_suffix, communi
     @parak k: the motif subgraph size to find
     @param nodes: an array of nodes to enumerate starting at
     @param output_suffix: a integer identifying a unique file to which to save the results
+    @param vertex_colored: a boolean flag to allow for vertex colors
+    @param edge_colored: a boolean flag to allow for edge colors
     @param community_based: a boolean flag to only enumerate subgraphs in the same community
     @param write_subgraphs: a boolean flag to write all enumerated subgraphs to disk
     """
-    # create the temp directory if it does not exist
-    CreateDirectoryStructure(input_filename, community_based, write_subgraphs)
+    # make sure that if coloring is request, the graph is colored
+    graph = ReadGraph(input_filename, header_only = True)
 
+    if vertex_colored: assert (graph.vertex_colored)
+    if edge_colored: assert (graph.edge_colored)
+
+    # create the temp directory if it does not exist
+    temp_directory = CreateDirectoryStructure(input_filename, vertex_colored, edge_colored, community_based, write_subgraphs)
+
+    # set the vertex color flag
+    CppSetVertexColored(vertex_colored)
+    # set the edge color flag
+    CppSetEdgeColored(edge_colored)
     # set the community based flag
     CppSetCommunityBased(community_based)
     # set the write subgraphs flag
@@ -99,14 +138,14 @@ def EnumerateSubgraphsFromNodes(input_filename, k, nodes, output_suffix, communi
     cdef np.ndarray[long, ndim=1, mode='c'] cpp_nodes = np.ascontiguousarray(nodes, dtype=ctypes.c_int64)
 
     # enumerate the subgraph, cast the string into a character array
-    CppEnumerateSubgraphsFromNodes(input_filename.encode('utf-8'), k, &(cpp_nodes[0]), nnodes, output_suffix)
+    CppEnumerateSubgraphsFromNodes(input_filename.encode('utf-8'), temp_directory.encode('utf-8'), k, &(cpp_nodes[0]), nnodes, output_suffix)
 
     # free memory
     del cpp_nodes
 
 
 
-def CombineEnumeratedSubgraphs(input_filename, k, community_based = False):
+def CombineEnumeratedSubgraphs(input_filename, k, vertex_colored = False, edge_colored = False, community_based = False):
     """
     Combine all of the enumerated subgraphs for a given file and motif size.
 
@@ -120,12 +159,11 @@ def CombineEnumeratedSubgraphs(input_filename, k, community_based = False):
     # create the list of vertices
     vertices = set(list(graph.vertices.keys()))
 
-    # get the temporary directory
-    if community_based: tmp_directory = 'temp-community-based/{}/certificates'.format(graph.prefix)
-    else: tmp_directory = 'temp/{}/certificates'.format(graph.prefix)
+    # get the temp directory
+    temp_directory = CreateDirectoryStructure(input_filename, vertex_colored, edge_colored, community_based, False)
 
     # get a list of all the input filenames for this motif size
-    input_filenames = sorted(glob.glob('{}/motif-size-{:03d}-*.txt'.format(tmp_directory, k)))
+    input_filenames = sorted(glob.glob('{}/certificates/motif-size-{:03d}-*.txt'.format(temp_directory, k)))
 
     # create a dictionary of certificates
     certificates = {}
@@ -167,15 +205,23 @@ def CombineEnumeratedSubgraphs(input_filename, k, community_based = False):
     assert (sum(certificates.values()) == total_nsubgraphs)
 
     # create the output directory if it does not exist
-    if community_based: output_directory = 'subgraphs-community-based/{}'.format(graph.prefix)
-    else: output_directory = 'subgraphs/{}'.format(graph.prefix)
+    output_directory = 'subgraphs/{}'.format('/'.join(temp_directory.split('/')[1:]))
+
     if not os.path.exists(output_directory):
         os.makedirs(output_directory, exist_ok = True)
 
     output_filename = '{}/motif-size-{:03d}-certificates.txt'.format(output_directory, k)
     with open(output_filename, 'w') as fd:
-        for certificate, nsubgraphs in certificates.items():
+
+        # write starting statistics
+        fd.write('Found {} unique subgraphs.\n'.format(len(certificates)))
+        print ('Found {} unique subgraphs'.format(len(certificates)))
+
+        # enumerate over all the certificates in descending order of occurrences
+        for certificate, nsubgraphs in sorted(certificates.items(), key = lambda x: x[1], reverse = True):
             fd.write('{}: {}\n'.format(certificate, nsubgraphs))
             print ('{}: {}'.format(certificate, nsubgraphs))
+
+        # write statistics
         fd.write('Enumerated {} subgraphs in {:0.2f} seconds.'.format(total_nsubgraphs, total_time))
         print ('Enumerated {} subgraphs in {:0.2f} seconds.'.format(total_nsubgraphs, total_time))
