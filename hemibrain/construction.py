@@ -86,7 +86,8 @@ def ConstructGraphFromHemiBrainCSV(MODERATE_THRESHOLD = 4, STRONG_THRESHOLD = 10
         # edges between the MODERATE_THRESHOLD and STRONG_THRESHOLD have moderate strength
         # edges with STRONG_THRESHOLD or more synapses are strongly connected
         has_moderate_strength = int(edges[(pre_neuron_id, post_neuron_id)] < STRONG_THRESHOLD)
-        graph.AddEdge(pre_neuron_id, post_neuron_id, weight = edges[(pre_neuron_id, post_neuron_id)], color = has_moderate_strength)
+        # use (1 - has_moderate_strength) to have moderate edges 0 weight and strong edges weight of one
+        graph.AddEdge(pre_neuron_id, post_neuron_id, weight = edges[(pre_neuron_id, post_neuron_id)], color = (1 - has_moderate_strength))
 
     # reverse the type mapping to go from index to name
     vertex_type_mapping = {}
@@ -94,8 +95,8 @@ def ConstructGraphFromHemiBrainCSV(MODERATE_THRESHOLD = 4, STRONG_THRESHOLD = 10
         vertex_type_mapping[index] = neuron_type
 
     edge_type_mapping = {
-        0: 'STRONG STRENGTH',
-        1: 'MODERATE STREGTNH',
+        0: 'MODERATE STRENGTH',
+        1: 'STRONG STRENGTH',
     }
 
     # set the vertex and edge type mapping
@@ -129,7 +130,7 @@ def ConstructGraphFromHemiBrainCSV(MODERATE_THRESHOLD = 4, STRONG_THRESHOLD = 10
         for edge in graph.edges.values():
             fd.write('{},{},{},{},{}\n'.format(edge.source_index, edge.destination_index, edge.weight, edge.color, graph.edge_type_mapping[edge.color]))
 
-            if not edge.color: nstrong_connections += 1
+            if edge.color: nstrong_connections += 1
             else: nmoderate_connections += 1
 
     # print statistics
