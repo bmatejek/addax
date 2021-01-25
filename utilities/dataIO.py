@@ -8,7 +8,7 @@ from addax.data_structures.graph import Graph
 
 
 
-def ReadGraph(input_filename, vertices_only = False):
+def ReadGraph(input_filename, header_only = False, vertices_only = False):
     """
     Read a graph data structure from disk
 
@@ -30,8 +30,10 @@ def ReadGraph(input_filename, vertices_only = False):
     byte_index += 128
 
     prefix = prefix.decode().strip('\0')
-    
+
     graph = Graph(prefix, directed, vertex_colored, edge_colored)
+
+    if header_only: return graph
 
     # read all the vertices and add them to the graph
     for _ in range(nvertices):
