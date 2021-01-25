@@ -11,18 +11,20 @@ import community as community_louvain
 
 
 class Graph(object):
-    def __init__(self, prefix, directed, colored):
+    def __init__(self, prefix, directed, vertex_colored, edge_colored):
         """
         Graph class defines the basic graph structure for addax used for clustering commmunities, motif discovery,
         and generating random examples
 
         @param prefix: a string to reference this graph by
         @param directed: indicates if the graph is directed or undirected
-        @param colored: indicates if the nodes in the graph have color
+        @param vertex_colored: indicates if the vertices in the graph have color
+        @param edge_colored: indicates if the edges in the graph have color
         """
         self.prefix = prefix
         self.directed = directed
-        self.colored = colored
+        self.vertex_colored = vertex_colored
+        self.edge_colored = edge_colored
 
         # vertices is a mapping from the vertex index to the vertex object
         self.vertices = {}
@@ -30,6 +32,9 @@ class Graph(object):
         self.edges = []
         # the edge set contains a list of (source, destination) indices
         self.edge_set = set()
+        # get a mapping from vertex/edge colors to strings
+        self.vertex_type_mapping = {}
+        self.edge_type_mapping = {}
 
     def AddVertex(self, index, enumeration_index = -1, community = -1, color = -1):
         """
@@ -50,13 +55,14 @@ class Graph(object):
         vertex = self.Vertex(self, index, enumeration_index, community, color)
         self.vertices[index] = vertex
 
-    def AddEdge(self, source_index, destination_index, weight = 1):
+    def AddEdge(self, source_index, destination_index, weight = 1, color = -1):
         """
         Add an edge to the graph
 
         @param source_index: the integer of the source index in the graph
         @param destination_index: the integer of the destination index in the graph
         @param weight: the weight of this edge where higher values indicate greater strength (default = 1)
+        @param color: the color that the edge has (default = -1)
         """
         # the source and destination indices must actually belong to vertices
         assert (source_index in self.vertices)
@@ -72,7 +78,7 @@ class Graph(object):
             source_index = tmp
 
         # create the edge and add it to the list of edges
-        edge = self.Edge(self, source_index, destination_index, weight)
+        edge = self.Edge(self, source_index, destination_index, weight, color)
         self.edges.append(edge)
 
         # add to the set of edges in the graph for easier look up
@@ -86,6 +92,28 @@ class Graph(object):
         # add the edge to both vertices
         self.vertices[source_index].AddEdge(edge)
         self.vertices[destination_index].AddEdge(edge)
+
+    def SetVertexTypeMapping(self, vertex_type_mapping):
+        """
+        Set the vertex type mapping
+
+        @param vertex_type_mapping: the vertex mapping from indices to names
+        """
+        self.vertex_type_mapping = vertex_type_mapping
+
+        for vertex in self.vertices.values():
+            assert (vertex.color in self.vertex_type_mapping)
+
+    def SetEdgeTypeMapping(self, edge_type_mapping):
+        """
+        Set the edge type mapping
+
+        @param edge_type_mapping: the edge mapping from indices to names
+        """
+        self.edge_type_mapping = edge_type_mapping
+
+        for edge in self.edges:
+            assert (edge.color in self.edge_type_mapping)
 
     def NVertices(self):
         """
@@ -223,9 +251,8 @@ class Graph(object):
             """
             return self.neighbors
 
-
     class Edge(object):
-        def __init__(self, graph, source_index, destiantion_index, weight = 1):
+        def __init__(self, graph, source_index, destiantion_index, weight = 1, color = -1):
             """
             Edge class defines the edges in a graph that connect the vertices
 
@@ -233,8 +260,10 @@ class Graph(object):
             @param source_index: the integer of the source index in the graph
             @param destination_index: the integer of the destination index in the graph
             @param weight: the weight of this edge where higher values indicate greater strength (default = 1)
+            @param color: the color that the edge has (default = -1)
             """
             self.graph = graph
             self.source_index = source_index
             self.destination_index = destiantion_index
             self.weight = weight
+            self.color = color

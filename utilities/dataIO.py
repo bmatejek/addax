@@ -22,16 +22,16 @@ def ReadGraph(input_filename, vertices_only = False):
     byte_index = 0
 
     # read the basic attributes for the graph
-    nvertices, nedges, directed, colored, = struct.unpack('qq??', data[byte_index:byte_index + 18])
-    byte_index += 18
+    nvertices, nedges, directed, vertex_colored, edge_colored = struct.unpack('qq???', data[byte_index:byte_index + 19])
+    byte_index += 19
 
     # read the prefix
     prefix, = struct.unpack('128s', data[byte_index:byte_index + 128])
     byte_index += 128
 
     prefix = prefix.decode().strip('\0')
-
-    graph = Graph(prefix, directed, colored)
+    
+    graph = Graph(prefix, directed, vertex_colored, edge_colored)
 
     # read all the vertices and add them to the graph
     for _ in range(nvertices):
@@ -45,10 +45,42 @@ def ReadGraph(input_filename, vertices_only = False):
 
     # read all of the edges and add them to the graph
     for _ in range(nedges):
-        source_index, destination_index, weight, = struct.unpack('qqd', data[byte_index:byte_index + 24])
-        byte_index += 24
+        source_index, destination_index, weight, color, = struct.unpack('qqdq', data[byte_index:byte_index + 32])
+        byte_index += 32
 
-        graph.AddEdge(source_index, destination_index, weight)
+        graph.AddEdge(source_index, destination_index, weight, color)
+
+    # read the vertex type mappings
+    nvertex_types, = struct.unpack('q', data[byte_index:byte_index + 8])
+    byte_index += 8
+
+    vertex_type_mapping = {}
+    for _ in range(nvertex_types):
+        index, = struct.unpack('q', data[byte_index:byte_index + 8])
+        byte_index += 8
+
+        vertex_type, = struct.unpack('128s', data[byte_index:byte_index + 128])
+        byte_index += 128
+
+        vertex_type_mapping[index] = vertex_type.decode().strip('\0')
+
+    if graph.vertex_colored: graph.SetVertexTypeMapping(vertex_type_mapping)
+
+    # read the edge type mappings
+    nedge_types, = struct.unpack('q', data[byte_index:byte_index + 8])
+    byte_index += 8
+
+    edge_type_mapping = {}
+    for _ in range(nedge_types):
+        index, = struct.unpack('q', data[byte_index:byte_index + 8])
+        byte_index += 8
+
+        edge_type, = struct.unpack('128s', data[byte_index:byte_index + 128])
+        byte_index += 128
+
+        edge_type_mapping[index] = edge_type.decode().strip('\0')
+
+    if graph.edge_colored: graph.SetEdgeTypeMapping(edge_type_mapping)
 
     return graph
 
@@ -67,8 +99,8 @@ def ReadPrefix(input_filename):
     byte_index = 0
 
     # read the basic attributes for the graph
-    nvertices, nedges, directed, colored, = struct.unpack('qq??', data[byte_index:byte_index + 18])
-    byte_index += 18
+    nvertices, nedges, directed, vertex_colored, edge_colored = struct.unpack('qq???', data[byte_index:byte_index + 19])
+    byte_index += 19
 
     # read the prefix
     prefix, = struct.unpack('128s', data[byte_index:byte_index + 128])
@@ -96,13 +128,14 @@ def WriteGraph(graph, output_filename):
     nvertices = graph.NVertices()
     nedges = graph.NEdges()
     directed = graph.directed
-    colored = graph.colored
+    vertex_colored = graph.vertex_colored
+    edge_colored = graph.edge_colored
     prefix = graph.prefix
 
     # create an empty byte array which we will concatenate later
     compressed_graph = []
 
-    compressed_graph.append(compressor.compress(struct.pack('qq??', nvertices, nedges, directed, colored)))
+    compressed_graph.append(compressor.compress(struct.pack('qq???', nvertices, nedges, directed, vertex_colored, edge_colored)))
     compressed_graph.append(compressor.compress(struct.pack('128s', prefix.encode())))
 
     # write all of the vertices and their attributes
@@ -111,7 +144,19 @@ def WriteGraph(graph, output_filename):
 
     # write all of the edges and their attributes
     for edge in graph.edges:
-        compressed_graph.append(compressor.compress(struct.pack('qqd', edge.source_index, edge.destination_index, edge.weight)))
+        compressed_graph.append(compressor.compress(struct.pack('qqdq', edge.source_index, edge.destination_index, edge.weight, edge.color)))
+
+    # write the vertex types
+    nvertex_types = len(graph.vertex_type_mapping)
+    compressed_graph.append(compressor.compress(struct.pack('q', nvertex_types)))
+    for index, vertex_type in graph.vertex_type_mapping.items():
+        compressed_graph.append(compressor.compress(struct.pack('q128s', index, vertex_type.encode())))
+
+    # write the edge types
+    nedge_types = len(graph.edge_type_mapping)
+    compressed_graph.append(compressor.compress(struct.pack('q', nedge_types)))
+    for index, edge_type in graph.edge_type_mapping.items():
+        compressed_graph.append(compressor.compress(struct.pack('q128s', index, edge_type.encode())))
 
     # flush the data
     compressed_graph.append(compressor.flush())
