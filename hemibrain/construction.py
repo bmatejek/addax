@@ -126,7 +126,7 @@ def ConstructGraphFromHemiBrainCSV(MODERATE_THRESHOLD = 4, STRONG_THRESHOLD = 10
 
     with open('CSVs/HemiBrain/condensed-edges.csv', 'w') as fd:
         fd.write('Pre Synaptic Neuron ID,Post Synaptic Neuron ID,Weight,Color Index,Color Name,\n')
-        for edge in graph.edges:
+        for edge in graph.edges.values():
             fd.write('{},{},{},{},{}\n'.format(edge.source_index, edge.destination_index, edge.weight, edge.color, graph.edge_type_mapping[edge.color]))
 
             if not edge.color: nstrong_connections += 1

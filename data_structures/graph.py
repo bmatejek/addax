@@ -80,7 +80,7 @@ class Graph(object):
 
         # if the graph is undirected, add both directions to the dictionary
         self.edges[(source_index, destination_index)] = edge
-        if not self.directed: self.edges[(destination_index, source_index)] = edge 
+        if not self.directed: self.edges[(destination_index, source_index)] = edge
 
         # add the edge to both vertices
         self.vertices[source_index].AddEdge(edge)
@@ -105,7 +105,7 @@ class Graph(object):
         """
         self.edge_type_mapping = edge_type_mapping
 
-        for edge in self.edges:
+        for edge in self.edges.values():
             assert (edge.color in self.edge_type_mapping)
 
     def NVertices(self):
@@ -118,7 +118,10 @@ class Graph(object):
         """
         Return the number of edges in this graph
         """
-        return len(self.edges)
+        if self.directed:
+            return len(self.edges)
+        else:
+            return len(self.edges) // 2
 
     def DetectCommunities(self):
         """
@@ -133,7 +136,7 @@ class Graph(object):
 
         # add all edges to the networkx graph
         undirected_edges = {}
-        for edge in self.edges:
+        for edge in self.edges.values():
             # get the min and max edge
             edge_one = min(edge.source_index, edge.destination_index)
             edge_two = max(edge.destination_index, edge.source_index)
