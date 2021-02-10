@@ -312,7 +312,7 @@ void EnumerateVertex(Graph *G,
                     if (G->edges.find(std::pair<long, long>(vertex_one, vertex_two)) != G->edges.end()) {
                         color = G->edges[std::pair<long, long>(vertex_one, vertex_two)]->color;
                     }
-                    
+
                     // convert the long into bytes
                     short nbytes_per_long = 8;
                     for (long ib = 0; ib < nbytes_per_long; ++ib) {
@@ -415,7 +415,7 @@ void EnumerateSubgraphsFromNode(Graph *G, short k, long u)
     */
     // start statistics
     unsigned int start_time = clock();
-
+    printf("Starting node %ld\n", u);
     enumerated_subgraphs = 0;
 
     // create an empty NyGraph (Nauty Graph) data structure
@@ -441,11 +441,12 @@ void EnumerateSubgraphsFromNode(Graph *G, short k, long u)
     S[0].insert(u);
 
     // enumerate all subgraphs of size k - 1 that contain the root u
+    printf("Enumerating subgraphs\n");
     EnumerateVertex(G, u, S, k - 1, 1, visited);
 
     // don't include any I/O time in the total time
     float total_time = (float) (clock() - start_time) / CLOCKS_PER_SEC;
-
+    printf("Completed in %0.2f seconds", total_time);
     for (std::map<std::string, long>::iterator it = certificates.begin(); it != certificates.end(); ++it) {
         const char *certificate = it->first.c_str();
 
@@ -454,15 +455,16 @@ void EnumerateSubgraphsFromNode(Graph *G, short k, long u)
         }
         fprintf(certificate_fp, ": %ld\n", it->second);
     }
-
+    printf("Wrote certificates to disk\n");
     // clear the certificates
     certificates.clear();
-
+    printf("Clearing mapping\n");
     // free memory
     delete nauty_graph;
-
+    printf("Deleting graph\n");
     // print statistics
     fprintf(certificate_fp, "Enumerated %ld subgraphs for node %ld in %0.2f seconds.\n", enumerated_subgraphs, u, total_time);
+    fflush(certificate_fp);
 }
 
 
