@@ -3,6 +3,7 @@
 #include <ctime>
 #include <map>
 #include <string>
+#include <algorithm>
 #include <nauty.h>
 #include "cpp-nauty.h"
 #include "cpp-graph.h"
@@ -79,8 +80,22 @@ std::vector<long> Validate(Graph *G,
 
 
 
-void Combination(std::vector<long> &vertices,
-                 std::vector<std::vector<long> > &combinations,
+void EnumerateVertex(Graph *G,
+                     long u,
+                     std::map<long, std::unordered_set<long> > &S,
+                     short rem,
+                     short i,
+                     std::unordered_set<long> &visited);
+
+
+void Combination(Graph *G,
+                 long u,
+                 std::map<long, std::unordered_set<long> > &S,
+                 short rem,
+                 short k_i,
+                 short i,
+                 std::unordered_set<long> &visited,
+                 std::vector<long> &vertices,
                  long nvertices,
                  long r,
                  long combo_index,
@@ -100,13 +115,14 @@ void Combination(std::vector<long> &vertices,
 
     // current combination is ready
     if (combo_index == r) {
-        std::vector<long> new_combination = std::vector<long>();
-
+        // update the set S value at this level with this combination
+        S[i] = std::unordered_set<long>();
         for (long iv = 0; iv < r; ++iv) {
-            new_combination.push_back(combination[iv]);
+            S[i].insert(combination[iv]);
         }
 
-        combinations.push_back(new_combination);
+        // enumerate given this new combination
+        EnumerateVertex(G, u, S, rem - k_i, i + 1, visited);
 
         // return to previous recursion level
         return;
@@ -117,17 +133,25 @@ void Combination(std::vector<long> &vertices,
 
     // vertex_index is included, put next combo_index at next location
     combination[combo_index] = vertices[vertex_index];
-    Combination(vertices, combinations, nvertices, r, combo_index + 1, combination, vertex_index + 1);
+    Combination(G, u, S, rem, k_i, i, visited, vertices, nvertices, r, combo_index + 1, combination, vertex_index + 1);
 
     // current is excluded, replace it with the next vertex
     // we do not increment the combo_index, but the vertex_index
-    Combination(vertices, combinations, nvertices, r, combo_index, combination, vertex_index + 1);
+    Combination(G, u, S, rem, k_i, i, visited, vertices, nvertices, r, combo_index, combination, vertex_index + 1);
 
 }
 
 
 
-std::vector<std::vector<long> > Combinations(std::vector<long> &vertices, long r)
+void Combinations(Graph *G,
+                 long u,
+                 std::map<long, std::unordered_set<long> > &S,
+                 short rem,
+                 short k_i,
+                 short i,
+                 std::unordered_set<long> &visited,
+                 std::vector<long> &vertices,
+                 long r)
 {
     /*
     Create a vector of combinations of length r from vertices
@@ -136,17 +160,13 @@ std::vector<std::vector<long> > Combinations(std::vector<long> &vertices, long r
     @param r: the size of the combinations to generate
     */
 
-    std::vector<std::vector<long> > combinations = std::vector<std::vector<long> >();
-
     // get the number of elements in the vector
     long nvertices = vertices.size();
     // a temporary array to store combinations as they form
     long combination[r];
 
     // begin population all combinations
-    Combination(vertices, combinations, nvertices, r, 0, combination, 0);
-
-    return combinations;
+    Combination(G, u, S, rem, k_i, i, visited, vertices, nvertices, r, 0, combination, 0);
 }
 
 
@@ -376,20 +396,8 @@ void EnumerateVertex(Graph *G,
     short n_i = std::min(valid_vertices.size(), (unsigned long)rem);
 
     for (short k_i = 1; k_i <= n_i; ++k_i) {
-        // get all combinations of size k_i for the valid vertices
-        std::vector<std::vector<long> > combinations = Combinations(valid_vertices, k_i);
-
-        for (unsigned long iv1 = 0; iv1 < combinations.size(); ++iv1) {
-            std::vector<long> combination = combinations[iv1];
-
-            // update the set S value at this level with this combination
-            S[i] = std::unordered_set<long>();
-            for (unsigned long iv2 = 0; iv2 < combination.size(); ++iv2) {
-                S[i].insert(combination[iv2]);
-            }
-
-            EnumerateVertex(G, u, S, rem - k_i, i + 1, visited);
-        }
+        // get all combinations of size k_i for the valid vertices and recurse from there
+        Combinations(G, u, S, rem, k_i, i, visited, valid_vertices, k_i);
     }
 
     // remove all the valid vertices from the list of visited
@@ -415,13 +423,12 @@ void EnumerateSubgraphsFromNode(Graph *G, short k, long u)
     */
     // start statistics
     unsigned int start_time = clock();
-    printf("Starting node %ld\n", u);
+    
     enumerated_subgraphs = 0;
 
     // create an empty NyGraph (Nauty Graph) data structure
     if (VERTEX_COLORED) nauty_graph = new NyGraph(k, true);
     else nauty_graph = new NyGraph(k, false);
-
 
     // create an empty certificates dictionary
     certificates = std::map<std::string, long>();
@@ -441,12 +448,11 @@ void EnumerateSubgraphsFromNode(Graph *G, short k, long u)
     S[0].insert(u);
 
     // enumerate all subgraphs of size k - 1 that contain the root u
-    printf("Enumerating subgraphs\n");
     EnumerateVertex(G, u, S, k - 1, 1, visited);
 
     // don't include any I/O time in the total time
     float total_time = (float) (clock() - start_time) / CLOCKS_PER_SEC;
-    printf("Completed in %0.2f seconds", total_time);
+
     for (std::map<std::string, long>::iterator it = certificates.begin(); it != certificates.end(); ++it) {
         const char *certificate = it->first.c_str();
 
@@ -455,13 +461,13 @@ void EnumerateSubgraphsFromNode(Graph *G, short k, long u)
         }
         fprintf(certificate_fp, ": %ld\n", it->second);
     }
-    printf("Wrote certificates to disk\n");
+
     // clear the certificates
     certificates.clear();
-    printf("Clearing mapping\n");
+
     // free memory
     delete nauty_graph;
-    printf("Deleting graph\n");
+
     // print statistics
     fprintf(certificate_fp, "Enumerated %ld subgraphs for node %ld in %0.2f seconds.\n", enumerated_subgraphs, u, total_time);
     fflush(certificate_fp);
