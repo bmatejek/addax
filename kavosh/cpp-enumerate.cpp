@@ -1,6 +1,6 @@
 #include <pwd.h>
 #include <stdio.h>
-#include <ctime>
+#include <chrono>
 #include <map>
 #include <string>
 #include <algorithm>
@@ -422,8 +422,7 @@ void EnumerateSubgraphsFromNode(Graph *G, short k, long u)
     Returns a generator that continually gives the next subgraph in the graph rooted as this vertex
     */
     // start statistics
-    unsigned int start_time = clock();
-    
+    clock_t start_time = clock();
     enumerated_subgraphs = 0;
 
     // create an empty NyGraph (Nauty Graph) data structure
@@ -469,7 +468,7 @@ void EnumerateSubgraphsFromNode(Graph *G, short k, long u)
     delete nauty_graph;
 
     // print statistics
-    fprintf(certificate_fp, "Enumerated %ld subgraphs for node %ld in %0.2f seconds.\n", enumerated_subgraphs, u, total_time);
+    fprintf(certificate_fp, "Enumerated %ld subgraphs for node %ld in %0.6f seconds.\n", enumerated_subgraphs, u, total_time);
     fflush(certificate_fp);
 }
 
