@@ -151,6 +151,8 @@ def CombineEnumeratedSubgraphs(input_filename, k, vertex_colored = False, edge_c
 
     @param input_filename: location for the graph to enumerate
     @parak k: the motif subgraph size to find
+    @param vertex_colored: a boolean flag to allow for vertex colors
+    @param edge_colored: a boolean flag to allow for edge colors
     @param community_based: a boolean flag to only enumerate subgraphs in the same community
     """
     # read the graph (only vertices)
