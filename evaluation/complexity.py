@@ -74,7 +74,6 @@ def PrintRunningTimeStatistics(graph, input_filename, motif_size, vertex_colored
     for cpu_time in cpu_times:
         idle_cpu_time += (wall_time - cpu_time)
 
-
     # make sure that every vertex is accounted for
     assert (sorted(list(running_times.keys())) == sorted(list(graph.vertices.keys())))
 
@@ -83,6 +82,7 @@ def PrintRunningTimeStatistics(graph, input_filename, motif_size, vertex_colored
     print ('  Median Time: {:0.2f} seconds'.format(np.median(list(running_times.values()))))
     print ('  Maximum Time: {:0.2f} seconds'.format(np.max(list(running_times.values()))))
     print ('  Std Dev: {:0.2f} seconds'.format(np.std(list(running_times.values()))))
+    print ('  95th Percentile: {:0.2f} seconds'.format(np.percentile(list(running_times.values()), 95)))
     print ('  Wall Time: {:0.2f} minutes'.format(wall_time / 60))
     print ('  Idle CPU Time: {:0.2f} hours'.format(idle_cpu_time / 3600))
     print ('  Total Time: {:0.2f} seconds'.format(sum(list(running_times.values()))))
