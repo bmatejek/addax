@@ -201,9 +201,9 @@ class Graph(object):
             # if the graph is directed, add the incoming or outgoing edge
             if self.graph.directed:
                 if edge.source_index == edge.destination_index:
-                    self.incoming_neighbors(self.index)
-                    self.outgoing_neighbors(self.index)
-                    self.neighbors(self.index)
+                    self.incoming_neighbors.add(self.index)
+                    self.outgoing_neighbors.add(self.index)
+                    self.neighbors.add(self.index)
                 elif edge.source_index == self.index:
                     self.outgoing_edges.append(edge)
                     assert (not edge.destination_index in self.outgoing_neighbors)
@@ -220,9 +220,9 @@ class Graph(object):
                 self.outgoing_edges.append(edge)
 
                 if edge.source_index == edge.destination_index:
-                    self.incoming_neighbors(self.index)
-                    self.outgoing_neighbors(self.index)
-                    self.neighbors(self.index)
+                    self.incoming_neighbors.add(self.index)
+                    self.outgoing_neighbors.add(self.index)
+                    self.neighbors.add(self.index)
                 elif edge.source_index == self.index:
                     assert (not edge.destination_index in self.incoming_neighbors and not edge.destination_index in self.outgoing_neighbors)
                     self.incoming_neighbors.add(edge.destination_index)
