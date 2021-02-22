@@ -66,9 +66,6 @@ class Graph(object):
         assert (source_index in self.vertices)
         assert (destination_index in self.vertices)
 
-        # do not allow self loops
-        assert (not source_index == destination_index)
-
         # if the graph is undirected, make the source destination the smaller of the two indices
         if not self.directed and destination_index < source_index:
             tmp = destination_index
@@ -203,7 +200,11 @@ class Graph(object):
 
             # if the graph is directed, add the incoming or outgoing edge
             if self.graph.directed:
-                if edge.source_index == self.index:
+                if edge.source_index == edge.destination_index:
+                    self.incoming_neighbors(self.index)
+                    self.outgoing_neighbors(self.index)
+                    self.neighbors(self.index)
+                elif edge.source_index == self.index:
                     self.outgoing_edges.append(edge)
                     assert (not edge.destination_index in self.outgoing_neighbors)
                     self.outgoing_neighbors.add(edge.destination_index)
@@ -218,7 +219,11 @@ class Graph(object):
                 self.incoming_edges.append(edge)
                 self.outgoing_edges.append(edge)
 
-                if edge.source_index == self.index:
+                if edge.source_index == edge.destination_index:
+                    self.incoming_neighbors(self.index)
+                    self.outgoing_neighbors(self.index)
+                    self.neighbors(self.index)
+                elif edge.source_index == self.index:
                     assert (not edge.destination_index in self.incoming_neighbors and not edge.destination_index in self.outgoing_neighbors)
                     self.incoming_neighbors.add(edge.destination_index)
                     self.outgoing_neighbors.add(edge.destination_index)
