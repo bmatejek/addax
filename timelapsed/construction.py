@@ -50,6 +50,9 @@ def ConstructGraphsFromTimelapsedXLSX():
                 # skip over edges that do not exist
                 if not synaptic_strength: continue
 
+                # skip over self loops
+                if pre_synaptic_vertex_index == post_synaptic_vertex_index: continue 
+
                 graph.AddEdge(pre_synaptic_vertex_index, post_synaptic_vertex_index, weight=synaptic_strength)
 
         graph.SetVertexTypeMapping(vertex_index_to_name)
