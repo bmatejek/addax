@@ -55,7 +55,7 @@ def ParseCertificate(graph, k, certificate, vertex_colored, edge_colored):
     for index in range(k):
         # colored graphs have labels for their colors
         if vertex_colored:
-            if vertex_colors[index] in color_mapping: nx_graph.add_node(index, label = graph.vertex_type_mapping[vertex_colors[index]])
+            if vertex_colors[index] in graph.vertex_type_mapping: nx_graph.add_node(index, label = graph.vertex_type_mapping[vertex_colors[index]])
             else: nx_graph.add_node(index, label = 'Color: {}'.format(vertex_colors[index]))
         else:
             nx_graph.add_node(index)
