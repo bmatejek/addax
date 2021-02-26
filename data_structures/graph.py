@@ -2,14 +2,6 @@ import struct
 
 
 
-import networkx as nx
-
-
-
-import community as community_louvain
-
-
-
 class Graph(object):
     def __init__(self, prefix, directed, vertex_colored, edge_colored):
         """
