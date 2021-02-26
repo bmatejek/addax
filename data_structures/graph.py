@@ -120,39 +120,6 @@ class Graph(object):
         else:
             return len(self.edges) // 2
 
-    def DetectCommunities(self):
-        """
-        Returns a list of communities based on the Louvain algorithm
-        """
-        # initialize a networkx graph
-        G = nx.Graph()
-
-        # add all vertices
-        for vertex in self.vertices.values():
-            G.add_node(vertex.index)
-
-        # add all edges to the networkx graph
-        undirected_edges = {}
-        for edge in self.edges.values():
-            # get the min and max edge
-            edge_one = min(edge.source_index, edge.destination_index)
-            edge_two = max(edge.destination_index, edge.source_index)
-
-            if not (edge_one, edge_two) in undirected_edges:
-                undirected_edges[(edge_one, edge_two)] = edge.weight
-            else:
-                undirected_edges[(edge_one, edge_two)] += edge.weight
-
-        # add the undirected edge to the graph
-        for (edge_one, edge_two) in undirected_edges:
-            G.add_edge(edge_one, edge_two, weight=undirected_edges[(edge_one, edge_two)])
-
-        # determine communities in the graph
-        partition = community_louvain.best_partition(G)
-
-        # get a list of communities using the Louvain algorithm
-        return partition
-
     def Communities(self):
         """
         Return a mapping from vertex indices to communities
