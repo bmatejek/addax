@@ -103,11 +103,6 @@ def ConstructGraphFromHemiBrainCSV(MODERATE_THRESHOLD = 4, STRONG_THRESHOLD = 10
     graph.SetVertexTypeMapping(vertex_type_mapping)
     graph.SetEdgeTypeMapping(edge_type_mapping)
 
-    # create the communities for this graph
-    partitions = graph.DetectCommunities()
-    for vertex, partition in partitions.items():
-        graph.vertices[vertex].community = partition
-
     # write the hemibrain graph to disk
     if not os.path.exists('graphs'):
         os.makedirs('graphs', exist_ok = True)
