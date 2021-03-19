@@ -1,5 +1,6 @@
 #include <pwd.h>
 #include <stdio.h>
+#include <math.h>
 #include <chrono>
 #include <map>
 #include <string>
@@ -12,6 +13,7 @@
 
 static long enumerated_subgraphs = 0;              // the number of enumerated subgraphs identified
 static NyGraph *nauty_graph;                       // graph object for canonical labeling
+static short nvertex_layers = 1;                   // the number of duplicate layers in the nauty input (for edge colors)
 static std::map<std::string, long> certificates;   // map of certificates
 
 static FILE *certificate_fp = NULL;             // file descriptor to write all certificates
@@ -203,9 +205,11 @@ void EnumerateVertex(Graph *G,
         // will not be populated for uncolored graphs
         // maps vertex color -> list of subgraph indices with that color
         std::map<long, std::vector<long> > coloring = std::map<long, std::vector<long> >();
-        std::map<long, long> index_to_coloring = std::map<long, long>();
-        short index = 0;
+        std::map<long, int16_t> index_to_coloring = std::map<long, int16_t>();
+        // create an empty vector for edge colors
+        std::vector<int8_t> edge_colors = std::vector<int8_t>();
 
+        short index = 0;
         for (short level = 0; level <= i - 1; ++level) {
             for (std::unordered_set<long>::iterator it = S[level].begin(); it != S[level].end(); ++it, ++index) {
                 // map this vertex to an index between 0 and k - 1
@@ -214,7 +218,7 @@ void EnumerateVertex(Graph *G,
 
                 if (VERTEX_COLORED) {
                     // get the color for this vertex
-                    long color = G->vertices[*it]->color;
+                    int16_t color = G->vertices[*it]->color;
 
                     // if this color is not yet seen, create a new vector for these colors
                     if (coloring.find(color) == coloring.end()) {
@@ -232,6 +236,30 @@ void EnumerateVertex(Graph *G,
 
         // the size of the motif
         long k = index;
+
+        // create the paths that link together all layers
+        // note this is skipped when there is only one layer
+        if (EDGE_COLORED) {
+            // create a cycle
+            for (int8_t il = 0; il < nvertex_layers; ++il) {
+                // iterate over all nodes in the subgraph
+                for (long iv = 0; iv < k; ++iv) {
+                    // the graph goes 0, k, 2 * k ... correspond to the same node
+                    long current_vertex_layer_index = iv + il * k;
+
+                    // create a cycle between the nodes in the same grouping
+                    long next_vertex_layer_index;
+                    if (il == nvertex_layers - 1) next_vertex_layer_index = iv;
+                    else next_vertex_layer_index = iv + (il + 1) * k;
+
+                    // connect these two vertices in the graph
+                    // do not believe these have to be bidirectional edges
+                    ADDELEMENT((GRAPHROW(nauty_graph->matrix, current_vertex_layer_index, nauty_graph->no_setwords)), next_vertex_layer_index);
+                }
+            }
+        }
+
+
         for (long out_index = 0; out_index < k; ++out_index) {
             long out_vertex = index_to_vertex[out_index];
             for (long in_index = 0; in_index < k; ++in_index) {
@@ -239,7 +267,32 @@ void EnumerateVertex(Graph *G,
 
                 // there is an edge from out_vertex to in_vertex
                 if (G->vertices[out_vertex]->outgoing_neighbors.find(in_vertex) != G->vertices[out_vertex]->outgoing_neighbors.end()) {
-                    ADDELEMENT((GRAPHROW(nauty_graph->matrix, out_index, nauty_graph->no_setwords)), in_index);
+                    // if the graph is edge colored, we need to add edges between the correct layers
+                    if (EDGE_COLORED && nvertex_layers > 1) {
+                        // get the color for this edge
+                        Edge *edge = G->edges[std::pair<long, long>(out_vertex, in_vertex)];
+                        // add one to the edge color here since the colors are 0-indexed
+                        int8_t color = edge->color + 1;
+                        long current_layer = 0;
+                        while (color) {
+                            // the bit is one at the rightmost location
+                            if (color % 2) {
+                                long layered_out_index = out_index + current_layer * k;
+                                long layered_in_index = in_index + current_layer * k;
+
+                                // add this edge to this particular layer
+                                ADDELEMENT((GRAPHROW(nauty_graph->matrix, layered_out_index, nauty_graph->no_setwords)), layered_in_index);
+                            }
+
+                            // shift the bits over by one and continue to the next layer
+                            color = color / 2;
+                            current_layer += 1;
+                        }
+                    }
+                    else {
+                        // ther are no layers to worry about in this scenario
+                        ADDELEMENT((GRAPHROW(nauty_graph->matrix, out_index, nauty_graph->no_setwords)), in_index);
+                    }
                 }
             }
         }
@@ -251,7 +304,28 @@ void EnumerateVertex(Graph *G,
         */
 
         // set *ptn and *lab for graph coloring
-        if (VERTEX_COLORED) {
+        if (EDGE_COLORED) {
+            // keep a linear index for the permuation arrays (lab, ptn)
+            long permuation_index = 0;
+
+            // each layer receives a unique coloring
+            for (int8_t il = 0; il < nvertex_layers; ++il) {
+                // go through all vertices in this layer
+                for (long iv = 0; iv < k; ++iv) {
+                    // set the labeling for this permutation index to this vertex
+                    nauty_graph->lab[permuation_index] = iv + il * k;
+
+                    // all values of ptn should be one except for the end of the coloring (which happens at the last layer)
+                    // set all to one here and after this loop set the previous index to 0
+                    nauty_graph->ptn[permuation_index] = 1;
+
+                    permuation_index += 1;
+                }
+
+                nauty_graph->ptn[permuation_index - 1] = 0;
+            }
+        }
+        else if (VERTEX_COLORED) {
             // keep a linear index for the permutation arrays (lab, ptn)
             long permutation_index = 0;
 
@@ -287,60 +361,96 @@ void EnumerateVertex(Graph *G,
                     nauty_graph->cmatrix
                 );
 
-        long nbytes = nauty_graph->no_vertices * nauty_graph->no_setwords * sizeof(setword);
-        unsigned char certificate_bytes[nbytes];
-        memcpy(&(certificate_bytes[0]), &(nauty_graph->cmatrix[0]), nbytes);
-
-        // construct a string certificate - need to iteratively add chars to the string
-        // to allow for null characters which are common in the cmatrix
+        // get the certificate
         std::string certificate = std::string();
-        for (long iv = 0; iv < nbytes; ++iv) {
-            certificate.push_back(certificate_bytes[iv]);
+
+        if (EDGE_COLORED) {
+            // go through all vertices in the small subgraph
+            // we only need to consider the first set
+            std::vector<long> vertex_ordering = std::vector<long>();
+            for (long iv = 0; iv < k; ++iv) {
+                // nauty_graph->lab[iv] gives the original index that maps to the iv'th location
+                vertex_ordering.push_back(index_to_vertex[nauty_graph->lab[iv]]);
+            }
+
+            // create a temporary nauty graph so that we can add vertices in their
+            // canonical ordering and copy the adjacency matrix
+            NyGraph *condensed_nauty_graph = new NyGraph(k, false);
+
+            // iterate over all vertices
+            for (long iv1 = 0; iv1 < k; ++iv1) {
+                long vertex_one = vertex_ordering[iv1];
+
+                for (long iv2 = 0; iv2 < k; ++iv2) {
+                    long vertex_two = vertex_ordering[iv2];
+
+                    // skip over edges that are missing
+                    if (G->edges.find(std::pair<long, long>(vertex_one, vertex_two)) == G->edges.end()) continue;
+
+                    // get the color for this edge
+                    Edge *edge = G->edges[std::pair<long, long>(vertex_one, vertex_two)];
+                    int8_t color = edge->color;
+
+                    edge_colors.push_back(color);
+
+                    ADDELEMENT((GRAPHROW(condensed_nauty_graph->matrix, iv1, condensed_nauty_graph->no_setwords)), iv2);
+                }
+            }
+
+            // get the canonical labeling from the certificate
+            long nbytes = condensed_nauty_graph->no_vertices * condensed_nauty_graph->no_setwords * sizeof(setword);
+            unsigned char certificate_bytes[nbytes];
+
+            // get the canonical labeling from the certificate
+            memcpy(&(certificate_bytes[0]), &(condensed_nauty_graph->matrix[0]), nbytes);
+
+            // construct a string certificate - need to iteratively add chars to the string
+            // to allow for null characters which are common in the cmatrix
+            for (long iv = 0; iv < nbytes; ++iv) {
+                certificate.push_back(certificate_bytes[iv]);
+            }
+
+            delete condensed_nauty_graph;
+        }
+        else {
+            // get the canonical labeling from the certificate
+            long nbytes = nauty_graph->no_vertices * nauty_graph->no_setwords * sizeof(setword);
+            unsigned char certificate_bytes[nbytes];
+
+            memcpy(&(certificate_bytes[0]), &(nauty_graph->cmatrix[0]), nbytes);
+
+            // construct a string certificate - need to iteratively add chars to the string
+            // to allow for null characters which are common in the cmatrix
+            for (long iv = 0; iv < nbytes; ++iv) {
+                certificate.push_back(certificate_bytes[iv]);
+            }
         }
 
+        // add the edge coloring to the certificate
+        if (EDGE_COLORED) {
+            // go through all of the found edges
+            for (unsigned long ie = 0; ie < edge_colors.size(); ++ie) {
+                int8_t color = edge_colors[ie];
+                certificate.push_back(color);
+            }
+        }
         // add the vertex coloring to the certificate
-        if (VERTEX_COLORED) {
+        else if (VERTEX_COLORED) {
             // go through all vertices in the small subgraph
             for (long iv = 0; iv < k; ++iv) {
                 // the value of int *lab after the call to nauty returns the vertices of
                 // g in order in which they need to be relabelled to give the canonical graph
                 // so lab[iv] gives the original index that maps to this location in the
                 // canonical labeling, and index_to_coloring[labl[iv]] gives the color of that vertex
-                long color = index_to_coloring[nauty_graph->lab[iv]];
+                int16_t color = index_to_coloring[nauty_graph->lab[iv]];
 
                 // convert the long into bytes
-                short nbytes_per_long = 8;
-                for (long ib = 0; ib < nbytes_per_long; ++ib) {
+                short nbytes_per_short = 2;
+                for (long ib = 0; ib < nbytes_per_short; ++ib) {
                     // first remove the bits in the previous bytes
                     // then remove the bits lower order than this
-                    unsigned char byte = (color << 8 * ib) >> 56;
+                    unsigned char byte = (color << 8 * ib) >> 8;
                     certificate.push_back(byte);
-                }
-            }
-        }
-        // add the edge coloring to the certificate
-        if (EDGE_COLORED) {
-            // go through all pairs of vertices in the small subgraph
-            for (long iv1 = 0; iv1 < k; ++iv1) {
-                long vertex_one = index_to_vertex[nauty_graph->lab[iv1]];
-
-                for (long iv2 = 0; iv2 < k; ++iv2) {
-                    long vertex_two = index_to_vertex[nauty_graph->lab[iv2]];
-
-                    // get the edge color from vertex_one to vertex_two (default = -1)
-                    long color = -1;
-                    if (G->edges.find(std::pair<long, long>(vertex_one, vertex_two)) != G->edges.end()) {
-                        color = G->edges[std::pair<long, long>(vertex_one, vertex_two)]->color;
-                    }
-
-                    // convert the long into bytes
-                    short nbytes_per_long = 8;
-                    for (long ib = 0; ib < nbytes_per_long; ++ib) {
-                        // first remove the bits in the previous bytes
-                        // then remove the bits lower order than this
-                        unsigned char byte = (color << 8 * ib) >> 56;
-                        certificate.push_back(byte);
-                    }
                 }
             }
         }
@@ -425,15 +535,25 @@ void EnumerateSubgraphsFromNode(Graph *G, short k, long u)
     clock_t start_time = clock();
     enumerated_subgraphs = 0;
 
-    // create an empty NyGraph (Nauty Graph) data structure
-    if (VERTEX_COLORED) nauty_graph = new NyGraph(k, true);
-    else nauty_graph = new NyGraph(k, false);
+    // get the number of layers (duplicate nodes) for edge colored graphs
+    if (EDGE_COLORED) {
+        nvertex_layers = (long) ceil(log2(G->nedge_types + 1));
+        nauty_graph = new NyGraph(nvertex_layers * k, true);
+    }
+    else if (VERTEX_COLORED) {
+        nauty_graph = new NyGraph(k, true);
+    }
+    else {
+        nauty_graph = new NyGraph(k, false);
+    }
 
     // create an empty certificates dictionary
     certificates = std::map<std::string, long>();
 
     // make sure this vertex appears in the graph
     assert (G->vertices.find(u) != G->vertices.end());
+    // can only handle setwords less than 64 bits (motifs smaller than that size)
+    assert (nauty_graph->no_setwords == 1);
 
     // keep track globally (through parameter passing) the vertices visited at higher enumeration steps
     std::unordered_set<long> visited = std::unordered_set<long>();

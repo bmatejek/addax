@@ -37,6 +37,8 @@ class Graph(object):
         """
         # vertices must have unique indices
         assert (not index in self.vertices)
+        # make sure that the number of node colors is less than 256
+        assert (color < 65536)
 
         # if there is no enumeration index, the index equals the number of vertices seen
         if enumeration_index == -1: enumeration_index = len(self.vertices)
@@ -57,6 +59,8 @@ class Graph(object):
         # the source and destination indices must actually belong to vertices
         assert (source_index in self.vertices)
         assert (destination_index in self.vertices)
+        # make sure that the number of edge colors remains 8 or fewer
+        assert (color < 7)
 
         # if the graph is undirected, make the source destination the smaller of the two indices
         if not self.directed and destination_index < source_index:

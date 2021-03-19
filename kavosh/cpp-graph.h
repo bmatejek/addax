@@ -26,7 +26,7 @@ Graph *ReadBZ2Graph(const char input_filename[4096]);
 class Vertex {
 public:
     // constructors/destructors
-    Vertex(Graph *graph, long index, long enumeration_index, long community, long color);
+    Vertex(Graph *graph, long index, long enumeration_index, long community, int16_t color);
     ~Vertex();
 
     // modifying functions
@@ -37,7 +37,7 @@ public:
     long index;
     long enumeration_index;
     long community;
-    long color;
+    int16_t color;
 
 
     // extra instance variables keep track of the ingoing and outgoing edges from the vertex
@@ -54,7 +54,7 @@ public:
 class Edge {
 public:
     // constructors/destructors
-    Edge(Graph *graph, long source_index, long destination_index, double weight, long color);
+    Edge(Graph *graph, long source_index, long destination_index, double weight, int8_t color);
     ~Edge();
 
     // instance variables
@@ -62,7 +62,7 @@ public:
     long source_index;
     long destination_index;
     double weight;
-    long color;
+    int8_t color;
 };
 
 
@@ -75,8 +75,8 @@ public:
     ~Graph();
 
     // modifying functions
-    void AddVertex(long index, long enumeration_index, long community = -1, long color = -1);
-    void AddEdge(long source_index, long destination_index, double weight = -1, long color = -1);
+    void AddVertex(long index, long enumeration_index, long community = -1, int16_t color = -1);
+    void AddEdge(long source_index, long destination_index, double weight = -1, int8_t color = -1);
 
     // attribute functions
     long NVertices(void);
@@ -89,6 +89,7 @@ public:
     bool edge_colored;
     std::map<long, Vertex *> vertices;
     std::map<std::pair<long, long>, Edge *> edges;
+    long nedge_types;
 };
 
 

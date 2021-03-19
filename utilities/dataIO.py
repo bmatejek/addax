@@ -37,8 +37,8 @@ def ReadGraph(input_filename, header_only = False, vertices_only = False):
 
     # read all the vertices and add them to the graph
     for _ in range(nvertices):
-        index, enumeration_index, community, color, = struct.unpack('qqqq', data[byte_index:byte_index + 32])
-        byte_index += 32
+        index, enumeration_index, community, color, = struct.unpack('qqqh', data[byte_index:byte_index + 26])
+        byte_index += 26
 
         graph.AddVertex(index, enumeration_index, community, color)
 
@@ -47,13 +47,14 @@ def ReadGraph(input_filename, header_only = False, vertices_only = False):
 
     # read all of the edges and add them to the graph
     for _ in range(nedges):
-        source_index, destination_index, weight, color, = struct.unpack('qqdq', data[byte_index:byte_index + 32])
-        byte_index += 32
+        source_index, destination_index, weight, color, = struct.unpack('qqdb', data[byte_index:byte_index + 25])
+        byte_index += 25
 
         graph.AddEdge(source_index, destination_index, weight, color)
 
     # read the vertex type mappings
     nvertex_types, = struct.unpack('q', data[byte_index:byte_index + 8])
+    assert (nvertex_types <= 65536)
     byte_index += 8
 
     vertex_type_mapping = {}
@@ -70,6 +71,7 @@ def ReadGraph(input_filename, header_only = False, vertices_only = False):
 
     # read the edge type mappings
     nedge_types, = struct.unpack('q', data[byte_index:byte_index + 8])
+    assert (nedge_types <= 7)
     byte_index += 8
 
     edge_type_mapping = {}
@@ -142,11 +144,11 @@ def WriteGraph(graph, output_filename):
 
     # write all of the vertices and their attributes
     for vertex in graph.vertices.values():
-        compressed_graph.append(compressor.compress(struct.pack('qqqq', vertex.index, vertex.enumeration_index, vertex.community, vertex.color)))
+        compressed_graph.append(compressor.compress(struct.pack('qqqh', vertex.index, vertex.enumeration_index, vertex.community, vertex.color)))
 
     # write all of the edges and their attributes
     for edge in graph.edges.values():
-        compressed_graph.append(compressor.compress(struct.pack('qqdq', edge.source_index, edge.destination_index, edge.weight, edge.color)))
+        compressed_graph.append(compressor.compress(struct.pack('qqdb', edge.source_index, edge.destination_index, edge.weight, edge.color)))
 
     # write the vertex types
     nvertex_types = len(graph.vertex_type_mapping)

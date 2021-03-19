@@ -2,7 +2,7 @@
 
 
 
-Vertex::Vertex(Graph *input_graph, long input_index, long input_enumeration_index, long input_community, long input_color)
+Vertex::Vertex(Graph *input_graph, long input_index, long input_enumeration_index, long input_community, int16_t input_color)
 {
     /*
     Vertex class defines the vertices in a graph that are labeled by the index
@@ -85,12 +85,12 @@ void Vertex::AddEdge(Edge *edge)
 
 
 
-Edge::Edge(Graph *graph, long source_index, long destination_index, double weight, long color) :
-graph(graph),
-source_index(source_index),
-destination_index(destination_index),
-weight(weight),
-color(color)
+Edge::Edge(Graph *input_graph, long input_source_index, long input_destination_index, double input_weight, int8_t input_color) :
+graph(input_graph),
+source_index(input_source_index),
+destination_index(input_destination_index),
+weight(input_weight),
+color(input_color)
 {
     /*
     Edge class defines the edges in a graph that connect the vertices
@@ -147,7 +147,7 @@ Graph::~Graph(void)
     }
 }
 
-void Graph::AddVertex(long index, long enumeration_index, long community, long color)
+void Graph::AddVertex(long index, long enumeration_index, long community, int16_t color)
 {
     /*
     Add a vertex to the graph
@@ -166,7 +166,7 @@ void Graph::AddVertex(long index, long enumeration_index, long community, long c
     vertices[index] = vertex;
 }
 
-void Graph::AddEdge(long source_index, long destination_index, double weight, long color)
+void Graph::AddEdge(long source_index, long destination_index, double weight, int8_t color)
 {
     /*
     Add an edge to the graph
@@ -249,7 +249,7 @@ Graph *ReadGraph(const char input_filename[4096])
         if (fread(&index, sizeof(long), 1, fp) != 1) { fprintf(stderr, "Failed to read %s\n", input_filename); return NULL; }
         if (fread(&enumeration_index, sizeof(long), 1, fp) != 1) { fprintf(stderr, "Failed to read %s\n", input_filename); return NULL; }
         if (fread(&community, sizeof(long), 1, fp) != 1) { fprintf(stderr, "Failed to read %s\n", input_filename); return NULL; }
-        if (fread(&color, sizeof(long), 1, fp) != 1) { fprintf(stderr, "Failed to read %s\n", input_filename); return NULL; }
+        if (fread(&color, sizeof(int16_t), 1, fp) != 1) { fprintf(stderr, "Failed to read %s\n", input_filename); return NULL; }
 
         graph->AddVertex(index, enumeration_index, community, color);
     }
@@ -261,7 +261,7 @@ Graph *ReadGraph(const char input_filename[4096])
         if (fread(&source_index, sizeof(long), 1, fp) != 1) { fprintf(stderr, "Failed to read %s\n", input_filename); return NULL; }
         if (fread(&destination_index, sizeof(long), 1, fp) != 1) { fprintf(stderr, "Failed to read %s\n", input_filename); return NULL; }
         if (fread(&weight, sizeof(double), 1, fp) != 1) { fprintf(stderr, "Failed to read %s\n", input_filename); return NULL; }
-        if (fread(&color, sizeof(long), 1, fp) != 1) { fprintf(stderr, "Failed to read %s\n", input_filename); return NULL; }
+        if (fread(&color, sizeof(int8_t), 1, fp) != 1) { fprintf(stderr, "Failed to read %s\n", input_filename); return NULL; }
 
         graph->AddEdge(source_index, destination_index, weight, color);
     }
@@ -313,14 +313,15 @@ Graph *ReadBZ2Graph(const char input_filename[4096])
 
     // read all the vertices and add them ot the graph
     for (long iv = 0; iv < nvertices; ++iv) {
-        long index, enumeration_index, community, color;
+        long index, enumeration_index, community;
+        int16_t color;
         BZ2_bzRead(&bzerror, bzfd, &index, sizeof(long));
         if (bzerror != BZ_OK) { fprintf(stderr, "Failed to read %s\n", input_filename); return NULL; }
         BZ2_bzRead(&bzerror, bzfd, &enumeration_index, sizeof(long));
         if (bzerror != BZ_OK) { fprintf(stderr, "Failed to read %s\n", input_filename); return NULL; }
         BZ2_bzRead(&bzerror, bzfd, &community, sizeof(long));
         if (bzerror != BZ_OK) { fprintf(stderr, "Failed to read %s\n", input_filename); return NULL; }
-        BZ2_bzRead(&bzerror, bzfd, &color, sizeof(long));
+        BZ2_bzRead(&bzerror, bzfd, &color, sizeof(int16_t));
         if (bzerror != BZ_OK) { fprintf(stderr, "Failed to read %s\n", input_filename); return NULL; }
 
         graph->AddVertex(index, enumeration_index, community, color);
@@ -328,21 +329,54 @@ Graph *ReadBZ2Graph(const char input_filename[4096])
 
     // read all of the edges and add them to the graph
     for (long ie = 0; ie < nedges; ++ie) {
-        long source_index, destination_index, color;
+        long source_index, destination_index;
         double weight;
+        int8_t color;
         BZ2_bzRead(&bzerror, bzfd, &source_index, sizeof(long));
         if (bzerror != BZ_OK) { fprintf(stderr, "Failed to read %s\n", input_filename); return NULL; }
         BZ2_bzRead(&bzerror, bzfd, &destination_index, sizeof(long));
         if (bzerror != BZ_OK) { fprintf(stderr, "Failed to read %s\n", input_filename); return NULL; }
         BZ2_bzRead(&bzerror, bzfd, &weight, sizeof(double));
         if (bzerror != BZ_OK) { fprintf(stderr, "Failed to read %s\n", input_filename); return NULL; }
-        BZ2_bzRead(&bzerror, bzfd, &color, sizeof(long));
+        BZ2_bzRead(&bzerror, bzfd, &color, sizeof(int8_t));
         if (bzerror != BZ_OK) { fprintf(stderr, "Failed to read %s\n", input_filename); return NULL; }
 
         graph->AddEdge(source_index, destination_index, weight, color);
     }
 
-    // there will still be remaining
+    // read the neuron and edge types for file verification
+    long nvertex_types;
+    BZ2_bzRead(&bzerror, bzfd, &nvertex_types, sizeof(long));
+    if (bzerror != BZ_OK) { fprintf(stderr, "Failed to read %s\n", input_filename); return NULL; }
+    assert (nvertex_types <= 65536);
+    for (long iv = 0; iv < nvertex_types; ++iv) {
+        long index;
+        char dummy[128];
+        BZ2_bzRead(&bzerror, bzfd, &index, sizeof(long));
+        if (bzerror != BZ_OK) { fprintf(stderr, "Failed to read %s\n", input_filename); return NULL; }
+        BZ2_bzRead(&bzerror, bzfd, &dummy, sizeof(dummy));
+        if (bzerror != BZ_OK) { fprintf(stderr, "Failed to read %s\n", input_filename); return NULL; }
+    }
+
+    long nedge_types;
+    BZ2_bzRead(&bzerror, bzfd, &nedge_types, sizeof(long));
+    if (bzerror != BZ_OK) { fprintf(stderr, "Failed to read %s\n", input_filename); return NULL; }
+    assert (nedge_types <= 7);
+
+    // update the graph with the number of edge types
+    graph->nedge_types = nedge_types;
+
+    for (long ie = 0; ie < nedge_types; ++ie) {
+        long index;
+        char dummy[128];
+        BZ2_bzRead(&bzerror, bzfd, &index, sizeof(long));
+        if (bzerror != BZ_OK) { fprintf(stderr, "Failed to read %s\n", input_filename); return NULL; }
+        BZ2_bzRead(&bzerror, bzfd, &dummy, sizeof(dummy));
+        if (bzerror != BZ_OK && bzerror != BZ_STREAM_END) { fprintf(stderr, "Failed to read %s\n", input_filename); return NULL; }
+    }
+
+    // make sure the end is reached
+    if (bzerror != BZ_STREAM_END) { fprintf(stderr, "Failed to read %s\n", input_filename); return NULL; }
 
     // close files
     BZ2_bzReadClose(&bzerror, bzfd);

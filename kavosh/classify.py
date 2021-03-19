@@ -26,24 +26,22 @@ def ParseCertificate(graph, k, certificate, vertex_colored, edge_colored):
     # matches the number of 64-bit words (on a 64-bit system) needed to fit all vertices.
     # for vertex colored graphs we also add on 64 bits for each node in the subgraph for vertex coloring
     # for edge colored graph we also add on 64 bits for each (potential edge) in the subgraph for edge coloring
-    if edge_colored:
-        # if the graph is colored, there are 16 characters per edge
-        # rest of string represents the canonical labeling and vertex coloring
-        coloring = certificate[-16 * k * k:]
-        certificate = certificate[:-16 * k * k]
-
-        # convert the vertex bytes (in hex) to base 10 integer
-        edge_colors = [int(coloring[16 * iv:16 * (iv + 1)], 16) for iv in range(k * k)]
-
-
     if vertex_colored:
         # if the graph is colored, there are 16 characters per vertex
-        # rest of the string represents the canonical labeling
-        coloring = certificate[-16 * k:]
-        certificate = certificate[:-16 * k]
+        # rest of string represents the canonical labeling and edge coloring
+        coloring = certificate[16 * k:]
+        certificate = certificate[:16 * k]
 
         # convert the vertex bytes (in hex) to base 10 integer
-        vertex_colors = [int(coloring[16 * iv: 16 * (iv + 1)], 16) for iv in range(k)]
+        vertex_colors = [int(coloring[2 * iv: 2 * (iv + 1)], 16) for iv in range(k)]
+
+    if edge_colored:
+        # if the graph is colored, there are 16 characters per vertex
+        # rest of string represents the canonical labeling and edge coloring
+        coloring = certificate[16 * k:]
+        certificate = certificate[:16 * k]
+        # convert the vertex bytes (in hex) to base 10 integer
+        edge_colors = [int(coloring[2 * iv:2 * (iv + 1)], 16) for iv in range(len(coloring) // 2)]
 
     # create a new networkx graph object
     if graph.directed:
@@ -67,6 +65,7 @@ def ParseCertificate(graph, k, certificate, vertex_colored, edge_colored):
     bytes_per_vertex = len(certificate) // k // 2
 
     # iterate over every vertex and extract the corresponding adjacency matrix
+    edge_index = 0
     for vertex in range(k):
         # multiple by two since we are using two characters in the string per byte (wrriten in hexademical)
         certificate_bytes = certificate[vertex * bytes_per_vertex * 2:(vertex + 1) * bytes_per_vertex * 2]
@@ -90,10 +89,13 @@ def ParseCertificate(graph, k, certificate, vertex_colored, edge_colored):
                         nx_graph.add_edge(vertex, neighbor_vertex)
                     else:
                         # create a coloringn for edges
-                        color = edge_colors[vertex * k + neighbor_vertex]
+                        color = edge_colors[edge_index]
 
                         # currently colors are based on edge strength (0 = moderate, 1 = strong)
                         nx_graph.add_edge(vertex, neighbor_vertex, penwidth = 2 * color + 1)
+
+                        # update edge index
+                        edge_index += 1
 
     return nx_graph
 

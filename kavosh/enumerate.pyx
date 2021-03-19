@@ -85,6 +85,9 @@ def EnumerateSubgraphsSequentially(input_filename, k, vertex_colored = False, ed
     if vertex_colored: assert (graph.vertex_colored)
     if edge_colored: assert (graph.edge_colored)
 
+    # the graph cannot be both vertex and edge colored
+    assert (not vertex_colored or not edge_colored)
+
     # create the temp directory if it does not exist
     temp_directory = CreateDirectoryStructure(input_filename, vertex_colored, edge_colored, community_based, write_subgraphs)
 
@@ -121,6 +124,9 @@ def EnumerateSubgraphsFromNodes(input_filename, k, nodes, output_suffix, vertex_
     if vertex_colored: assert (graph.vertex_colored)
     if edge_colored: assert (graph.edge_colored)
 
+    # the graph cannot be both vertex and edge colored
+    assert (not vertex_colored or not edge_colored)
+
     # create the temp directory if it does not exist
     temp_directory = CreateDirectoryStructure(input_filename, vertex_colored, edge_colored, community_based, write_subgraphs)
 
@@ -155,6 +161,9 @@ def CombineEnumeratedSubgraphs(input_filename, k, vertex_colored = False, edge_c
     @param edge_colored: a boolean flag to allow for edge colors
     @param community_based: a boolean flag to only enumerate subgraphs in the same community
     """
+    # the graph cannot be both vertex and edge colored
+    assert (not vertex_colored or not edge_colored)
+
     # read the graph (only vertices)
     graph = ReadGraph(input_filename, vertices_only = True)
 
