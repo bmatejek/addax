@@ -43,7 +43,7 @@ def DetectCommunities(graph):
 
     # calculate the METIS partitions
     start_time = time.time()
-    for partition_target in range(2, 15):
+    for partition_target in [5, 10, 15, 20, 25, 30]:
         edgecuts, metis_partition = metis.part_graph(networkx_graph, partition_target)
         print ('Calculated METIS partitions in {:0.2f} seconds'.format(time.time() - start_time))
 
