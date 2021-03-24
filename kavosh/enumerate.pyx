@@ -38,21 +38,22 @@ def CreateDirectoryStructure(input_filename, vertex_colored, edge_colored, commu
     @param community_based: a boolean flag to only enumerate subgraphs in the same community
     @param write_subgraphs: a boolean flag to write all enumerated subgraphs to disk
     """
+    # make sure that both vertex and edge colors are not both on
+    assert (not vertex_colored or not edge_colored)
+
     # is this enumeration community based
     if community_based: community_suffix = 'local'
     else: community_suffix = 'global'
-    # is this enumeration vertex colored
-    if vertex_colored: vertex_suffix = 'vertex-colored'
-    else: vertex_suffix = 'vertex-agnostic'
-    # is this enumeration edge colored
-    if edge_colored: edge_suffix = 'edge-colored'
-    else: edge_suffix = 'edge-agnostic'
 
+    # are there colors associated with this graph
+    if vertex_colored: color_suffix = 'vertex-colored'
+    elif edge_colored: color_suffix = 'edge-colored'
+    else: color_suffix = 'colorless'
 
     # get the prefix for the dataset
     prefix = ReadPrefix(input_filename)
 
-    temp_directory = 'temp/{}/{}/{}/{}'.format(prefix, community_suffix, vertex_suffix, edge_suffix)
+    temp_directory = 'temp/{}-{}-{}'.format(prefix, community_suffix, color_suffix)
 
     # create the certificate and subgraph directory
     certificate_directory = '{}/certificates'.format(temp_directory)
