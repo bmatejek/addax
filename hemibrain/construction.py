@@ -6,6 +6,7 @@ import time
 
 from addax.data_structures.graph import Graph
 from addax.utilities.dataIO import ReadGraph, WriteGraph, PickleData
+from addax.data_structures.enumeration import CalculateAscendingEnumerationIndex
 
 
 
