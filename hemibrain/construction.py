@@ -136,3 +136,5 @@ def ConstructGraphFromHemiBrainCSV(MODERATE_THRESHOLD = 4, STRONG_THRESHOLD = 10
     print ('No. Neuron Types: {}'.format(len(neuron_types)))
 
     print ('Wrote {} in {:0.2f} seconds.'.format(output_filename, time.time() - start_time))
+
+    CalculateAscendingEnumerationIndex(graph, 'minimum')
