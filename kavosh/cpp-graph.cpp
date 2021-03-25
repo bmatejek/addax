@@ -360,7 +360,8 @@ Graph *ReadBZ2Graph(const char input_filename[4096])
 
     long nedge_types;
     BZ2_bzRead(&bzerror, bzfd, &nedge_types, sizeof(long));
-    if (bzerror != BZ_OK) { fprintf(stderr, "Failed to read %s\n", input_filename); return NULL; }
+    // if there are no edge types this is the end 
+    if (bzerror != BZ_OK && bzerror != BZ_STREAM_END) { fprintf(stderr, "Failed to read %s\n", input_filename); return NULL; }
     assert (nedge_types <= 7);
 
     // update the graph with the number of edge types

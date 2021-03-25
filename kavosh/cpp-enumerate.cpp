@@ -407,6 +407,12 @@ void EnumerateVertex(Graph *G,
             // construct a string certificate - need to iteratively add chars to the string
             // to allow for null characters which are common in the cmatrix
             for (long iv = 0; iv < nbytes; ++iv) {
+                // we really only need to write the last two bytes for every vertex
+                // to reduce memory consumption this is better for large number of certificates (reduces the memory needed for certificates by a factor of 8x)
+                // this still allows for motifs of size 32 for colored edges
+                long byte_index = iv % 8;
+                if (byte_index != 7) continue;
+
                 certificate.push_back(certificate_bytes[iv]);
             }
 
@@ -422,6 +428,12 @@ void EnumerateVertex(Graph *G,
             // construct a string certificate - need to iteratively add chars to the string
             // to allow for null characters which are common in the cmatrix
             for (long iv = 0; iv < nbytes; ++iv) {
+                // we really only need to write the last two bytes for every vertex
+                // to reduce memory consumption this is better for large number of certificates (reduces the memory needed for certificates by a factor of 8x)
+                // this still allows for motifs of size 256 for non-colored edges
+                long byte_index = iv % 8;
+                if (byte_index != 7) continue;
+
                 certificate.push_back(certificate_bytes[iv]);
             }
         }

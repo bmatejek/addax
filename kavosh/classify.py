@@ -29,8 +29,8 @@ def ParseCertificate(graph, k, certificate, vertex_colored, edge_colored):
     if vertex_colored:
         # if the graph is colored, there are 16 characters per vertex
         # rest of string represents the canonical labeling and edge coloring
-        coloring = certificate[16 * k:]
-        certificate = certificate[:16 * k]
+        coloring = certificate[2 * k:]
+        certificate = certificate[:2 * k]
 
         # convert the vertex bytes (in hex) to base 10 integer
         vertex_colors = [int(coloring[2 * iv: 2 * (iv + 1)], 16) for iv in range(k)]
@@ -38,8 +38,8 @@ def ParseCertificate(graph, k, certificate, vertex_colored, edge_colored):
     if edge_colored:
         # if the graph is colored, there are 16 characters per vertex
         # rest of string represents the canonical labeling and edge coloring
-        coloring = certificate[16 * k:]
-        certificate = certificate[:16 * k]
+        coloring = certificate[2 * k:]
+        certificate = certificate[:2 * k]
         # convert the vertex bytes (in hex) to base 10 integer
         edge_colors = [int(coloring[2 * iv:2 * (iv + 1)], 16) for iv in range(len(coloring) // 2)]
 
