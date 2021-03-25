@@ -409,7 +409,7 @@ void EnumerateVertex(Graph *G,
             for (long iv = 0; iv < nbytes; ++iv) {
                 // we really only need to write the last two bytes for every vertex
                 // to reduce memory consumption this is better for large number of certificates (reduces the memory needed for certificates by a factor of 8x)
-                // this still allows for motifs of size 16 for colored edges
+                // this still allows for motifs of size 8 for colored edges
                 long byte_index = iv % 8;
                 if (byte_index != 7) continue;
 
@@ -430,7 +430,7 @@ void EnumerateVertex(Graph *G,
             for (long iv = 0; iv < nbytes; ++iv) {
                 // we really only need to write the last two bytes for every vertex
                 // to reduce memory consumption this is better for large number of certificates (reduces the memory needed for certificates by a factor of 8x)
-                // this still allows for motifs of size 16 for non-colored edges
+                // this still allows for motifs of size 8 for non-colored edges
                 long byte_index = iv % 8;
                 if (byte_index != 7) continue;
 
