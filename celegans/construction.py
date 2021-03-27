@@ -87,31 +87,66 @@ def ConstructGraphsFromSexesXLSX():
     """
     Consutrct a set of graphs from the two different sexes of the C. elegans worm
     """
+    input_filename = 'CSVs/Sexes/cell-lists.xlsx'
+    workbook = xlrd.open_workbook(input_filename)
+
+    neurons_by_sex = {
+        'male': {},
+        'hermaphrodite': {},
+    }
+
+    # iterate over all sheets
+    sheet_names = ['pharynx', 'sex-shared', 'hermaphrodite-specific', 'male-specific']
+    for sheet_name in sheet_names:
+        sheet = workbook.sheet_by_name(sheet_name)
+
+        nrows = sheet.nrows
+        for row_index in range(nrows):
+            neuron = sheet.cell_value(row_index, 0)
+            cell_type = sheet.cell_value(row_index, 1)
+
+            # skip over glial cells
+            if 'glial' in cell_type: continue
+
+            if sheet_name == 'hermaphrodite-specific':
+                assert (not neuron in neurons_by_sex['hermaphrodite'])
+                neurons_by_sex['hermaphrodite'][neuron] = len(neurons_by_sex['hermaphrodite'])
+            elif sheet_name == 'male-specific':
+                assert (not neuron in neurons_by_sex['male'])
+                neurons_by_sex['male'][neuron] = len(neurons_by_sex['male'])
+            else:
+                assert (not neuron in neurons_by_sex['male'])
+                assert (not neuron in neurons_by_sex['hermaphrodite'])
+                neurons_by_sex['hermaphrodite'][neuron] = len(neurons_by_sex['hermaphrodite'])
+                neurons_by_sex['male'][neuron] = len(neurons_by_sex['male'])
+
     input_filename = 'CSVs/Sexes/connectomes.xlsx'
     workbook = xlrd.open_workbook(input_filename)
 
     # read the four relevant sheets
     sheets = {
-        ('Male', 'Chemical'): 'male chemical',
-        ('Male', 'Electrical'): 'male gap jn symmetric',
-        ('Hermaphrodite', 'Chemical'): 'hermaphrodite chemical',
-        ('Hermaphrodite', 'Electrical'): 'hermaphrodite gap jn symmetric',
+        ('male', 'Chemical'): 'male chemical',
+        ('male', 'Electrical'): 'male gap jn symmetric',
+        ('hermaphrodite', 'Chemical'): 'hermaphrodite chemical',
+        ('hermaphrodite', 'Electrical'): 'hermaphrodite gap jn symmetric',
     }
 
-    for sex in ['Male', 'Hermaphrodite']:
+    for sex in ['male', 'hermaphrodite']:
         # start statistics
         start_time = time.time()
 
         # create a new graph for this connectome
         graph = Graph('C-elegans-sex-{}'.format(sex.lower()), directed = True, vertex_colored = True, edge_colored = True)
 
+        # get the neurons for this element
+        neurons = neurons_by_sex[sex]
+
         edges = {}
-        neurons = {}
 
         # go through electrical first since it contains a superset of neuronns
         for edge_type in ['Electrical', 'Chemical']:
             sheet = workbook.sheet_by_name(sheets[(sex, edge_type)])
-
+            print ('{} {}'.format(sex, edge_type))
             # get the number of rows and columns
             nrows = sheet.nrows
             ncols = sheet.ncols
@@ -120,36 +155,27 @@ def ConstructGraphsFromSexesXLSX():
             edges[edge_type] = {}
 
             # make sure that no two neurons have the same name
-            neuron_check = set()
-            for row_index in range(3, nrows):
-                neuron = sheet.cell_value(row_index, 2)
-                assert (not neuron in neuron_check)
-                neuron_check.add(neuron)
-
-            neuron_check = set()
-            for col_index in range(3, ncols):
-                neuron = sheet.cell_value(2, col_index)
-                assert (not neuron in neuron_check)
-                neuron_check.add(neuron)
-
+            nsynapses = 0
             for row_index in range(3, nrows - 1):
                 row_neuron = sheet.cell_value(row_index, 2)
-                # add to the list of neurons if it hasn't appeared
-                if not row_neuron in neurons: neurons[row_neuron] = len(neurons)
+                # skip neurons that are not in the cell lists
+                if not row_neuron in neurons: continue
 
                 # skip the last column
                 for col_index in range(3, ncols - 1):
                     col_neuron = sheet.cell_value(2, col_index)
-                    # add to the list of neurons if it hasn't appeared
-                    if not col_neuron in neurons: neurons[col_neuron] = len(neurons)
+                    # skip neurons that are not in the cell lists
+                    if not col_neuron in neurons: continue
 
                     # get the strength for this synapse
                     synapse_strength = sheet.cell_value(row_index, col_index)
 
                     # skip if there is no connection
                     if not synapse_strength: continue
+                    nsynapses += 1
 
                     edges[edge_type][(row_neuron, col_neuron)] = synapse_strength
+
 
         # create a mapping from vertex names to indices
         vertex_index_to_name = {}
