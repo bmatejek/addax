@@ -7,14 +7,15 @@ from addax.utilities.dataIO import ReadGraph
 
 
 
-def ParseCertificate(graph, k, certificate, vertex_colored, edge_colored):
+def ParseCertificate(k, certificate, vertex_colored, edge_colored, directed):
     """
     Produce a canonical graph from a certificate
 
-    @param graph: the input graph from which the certificate was generated
     @param k: motif size
     @param certificate: the certificate from Nauty to parse
-    @param color_mapping: a dictionary that converts color indices to strings
+    @param vertex_colored: is the graph vertex colored
+    @param edge_colored: is the graph edge colored
+    @param directed: is the graph directed
     """
     # this will require substantial debugging and validation for k > 256
     # currently skipped since motifs that size are computationally infeasible
@@ -139,7 +140,7 @@ def ParseCertificates(input_filename, k, vertex_colored = False, edge_colored = 
             if subgraph_digits_needed == -1: subgraph_digits_needed = len(str(nsubgraphs))
 
             # parse the certificate for this graph
-            nx_graph = ParseCertificate(graph, k, certificate, vertex_colored, edge_colored)
+            nx_graph = ParseCertificate(k, certificate, vertex_colored, edge_colored, graph.directed)
 
             # create the graph drawing structure
             A = nx.nx_agraph.to_agraph(nx_graph)
