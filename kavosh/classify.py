@@ -45,7 +45,7 @@ def ParseCertificate(k, certificate, vertex_colored, edge_colored, directed):
         edge_colors = [int(coloring[2 * iv:2 * (iv + 1)], 16) for iv in range(len(coloring) // 2)]
 
     # create a new networkx graph object
-    if graph.directed:
+    if directed:
         nx_graph = nx.DiGraph()
     else:
         nx_graph = nx.Graph()
