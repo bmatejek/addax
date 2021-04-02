@@ -32,13 +32,16 @@ def ReadCertificates(input_filename, k, vertex_colored, edge_colored, community_
 
     with open(subgraphs_filename, 'r') as fd:
         # read all of the certificates and enumerated subgraphs
-        for subgraph_index, certificate_info in enumerate(fd.readlines()[1:-1]):
-            certificate = certificate_info.split(':')[0].strip()
-            nsubgraphs = int(certificate_info.split(':')[1].strip())
+        for certificate_info in fd:
+            if certificate_info.startswith('Found'): continue
+            elif certificate_info.startswith('Enumerated'):
+                total_subgraphs = int(certificate_info.split()[1])
+                total_time = float(certificate_info.split()[-2])
+            else:
+                certificate = certificate_info.split(':')[0].strip()
+                nsubgraphs = int(certificate_info.split(':')[1].strip())
 
-            certificates[certificate] = nsubgraphs
-
-            total_subgraphs += nsubgraphs
+                certificates[certificate] = nsubgraphs
 
     # return the certificates and the number of subgraphs
-    return certificates, total_subgraphs
+    return certificates, total_subgraphs, total_time
