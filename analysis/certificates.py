@@ -73,6 +73,10 @@ def ReadSummaryStatistics(input_filename, k, vertex_colored, edge_colored, commu
     # read the combined enumerated subgraphs file
     subgraphs_filename = '{}/motif-size-{:03d}-certificates.txt'.format(input_directory, k)
 
+    # if this does not exist return -1
+    if not os.path.exists(subgraphs_filename):
+        return 0, 0
+
     with open(subgraphs_filename, 'rb') as fd:
         fd.seek(-2, os.SEEK_END)
         while (fd.read(1) != b'\n'):

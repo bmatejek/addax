@@ -1,4 +1,8 @@
 import os
+import sys
+
+
+
 import networkx as nx
 
 
@@ -88,3 +92,109 @@ def FindFrequentMotifs():
 
             plt.savefig(output_filename)
             plt.clf()
+
+
+
+def CountDatasetStatistics():
+    """
+    Count the subgraphs for the published datasets
+    """
+    # the datasets
+    input_filenames = {
+        'Hemi-Brain': 'graphs/hemi-brain-minimum.graph.bz2',
+        'C. elegans D1': 'graphs/C-elegans-timelapsed-01-minimum.graph.bz2',
+        'C. elegans D2': 'graphs/C-elegans-timelapsed-02-minimum.graph.bz2',
+        'C. elegans D3': 'graphs/C-elegans-timelapsed-03-minimum.graph.bz2',
+        'C. elegans D4': 'graphs/C-elegans-timelapsed-04-minimum.graph.bz2',
+        'C. elegans D5': 'graphs/C-elegans-timelapsed-05-minimum.graph.bz2',
+        'C. elegans D6': 'graphs/C-elegans-timelapsed-06-minimum.graph.bz2',
+        'C. elegans D7': 'graphs/C-elegans-timelapsed-07-minimum.graph.bz2',
+        'C. elegans D8': 'graphs/C-elegans-timelapsed-08-minimum.graph.bz2',
+        'C. elegans SH': 'graphs/C-elegans-sex-hermaphrodite-minimum.graph.bz2',
+        'C. elegans SM': 'graphs/C-elegans-sex-male-minimum.graph.bz2',
+    }
+
+    for dataset, input_filename in input_filenames.items():
+        # write the dataset
+        sys.stdout.write('{} '.format(dataset))
+
+        # iterate over k
+        for k in [3, 4, 5, 6, 7]:
+            # go through all possibilities
+            nsubgraphs, _ = ReadSummaryStatistics(input_filename, k, False, False, False)
+
+            # skip if this doesn't exist
+            if not nsubgraphs:
+                sys.stdout.write('& N/A ')
+            else:
+                sys.stdout.write('& {} '.format(nsubgraphs))
+
+        sys.stdout.write('\\\\ \n')
+
+
+
+def PlotMotifs(filenames, legend, k, output_prefix):
+    """
+    Plot the three motifs for these filenames with the legend
+
+    @param filenames: the files to show the motifs for
+    @param legend: the titles for each line
+    @param k: the subgraph size
+    @param k: location to save the file
+    """
+    # create an empty figure
+    fig = plt.figure(figsize=(10, 5))
+    ax = fig.add_subplot()
+
+    # set the preliminary information
+    ax.set_title('Proprtion of Subgraphs of Size {}'.format(k), fontsize=28)
+    ax.set_xlabel('Motif', fontsize=24)
+    ax.set_ylabel('Proportion of Subgraphs', fontsize=24)
+    ax.tick_params(axis='x', labelsize=0)
+    ax.tick_params(axis='y', labelsize=16)
+
+    certificates_per_filename = {}
+    total_subgraphs_per_filename = {}
+
+    # go through every file
+    for filename in filenames:
+        # set vertex and edge color, and communities to zero
+        certificates, total_subgraphs, _ = ReadCertificates(filename, k, False, False, False)
+
+        certificates_per_filename[filename] = certificates
+        total_subgraphs_per_filename[filename] = total_subgraphs
+
+    # create a set of ordered statistics
+    ordered_certificates = set()
+    for filename in filenames:
+        for certificate in certificates_per_filename[filename]:
+            ordered_certificates.add(certificate)
+
+    ordered_certificates = sorted(list(ordered_certificates))
+
+    # set the x limit
+    ax.set_xlim(xmin = 0, xmax = len(ordered_certificates) - 1)
+
+    # iterate through all files
+    for iv, filename in enumerate(filenames):
+        certificates = certificates_per_filename[filename]
+        total_subgraphs = total_subgraphs_per_filename[filename]
+
+        proportions = []
+
+        # go through all of the certificates
+        for certificate in ordered_certificates:
+            if not certificate in certificates:
+                proportions.append(0)
+            else:
+                proportions.append(certificates[certificate] / total_subgraphs)
+
+        ax.plot(proportions, label = legend[iv], linewidth = 2)
+
+    # save the figure
+    plt.legend(fontsize=16)
+
+    plt.tight_layout()
+    plt.savefig('{}-motif-size-{:03d}.png'.format(output_prefix, k))
+
+    plt.clf()
