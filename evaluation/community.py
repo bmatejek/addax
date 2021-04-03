@@ -71,4 +71,4 @@ def EvaluateCommunities(k, edge_colored):
     for community in sorted(metis_certificates.keys()):
         if k == 3: print ('{} & {} & \\SI{{{:0.2f}}}{{\sec}} & {:0.4f} \\\\'.format(community, metis_total_subgraphs[community], metis_total_time[community], CosineSimilarity(metis_vectors[1], metis_vectors[community])))
         elif k == 4: print ('{} & {} & \\SI{{{:0.2f}}}{{\hour}} & {:0.4f} \\\\'.format(community, metis_total_subgraphs[community], metis_total_time[community] / (3600), CosineSimilarity(metis_vectors[1], metis_vectors[community])))
-        else: print ('{} & {} & \\SI{{{:0.2f}}}{{\year}} & {:0.4f} \\\\'.format(community, metis_total_subgraphs[community], metis_total_time[community] / (3600 * 24 * 365), CosineSimilarity(metis_vectors[1], metis_vectors[community])))
+        else: print ('{} & {} & \\SI{{{:0.2f}}}{{\year}} & {:0.4f} \\\\'.format(community, metis_total_subgraphs[community], metis_total_time[community] / 31557600, CosineSimilarity(metis_vectors[1], metis_vectors[community])))

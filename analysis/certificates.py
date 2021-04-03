@@ -74,8 +74,8 @@ def ReadSummaryStatistics(input_filename, k, vertex_colored, edge_colored, commu
             fd.seek(-2, os.SEEK_CUR)
 
         summary = fd.readline().decode()
-
-        subgraphs = int(summary()[1])
-        total_time = float(summary_line.split()[-2])
+        
+        subgraphs = int(summary.split()[1])
+        total_time = float(summary.split()[-2])
 
     return subgraphs, total_time
