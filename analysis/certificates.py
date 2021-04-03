@@ -7,7 +7,7 @@ from addax.kavosh.enumerate import CreateDirectoryStructure
 
 
 
-def ReadCertificates(input_filename, k, vertex_colored, edge_colored, community_based):
+def ReadCertificates(input_filename, k, vertex_colored, edge_colored, community_based, ncertificates = -1):
     """
     Read the certificates for this graph from the subgraphs directory
 
@@ -16,6 +16,7 @@ def ReadCertificates(input_filename, k, vertex_colored, edge_colored, community_
     @param vertex_colored: a boolean flag to allow for vertex colors
     @param edge_colored: a boolean flag to allow for edge colors
     @param community_based: a boolean flag to only enumerate subgraphs in the same community
+    @param ncertificates: how many certificates to read (default = all)
     """
     # get the temp directory
     temp_directory = CreateDirectoryStructure(input_filename, vertex_colored, edge_colored, community_based, False)
@@ -29,11 +30,12 @@ def ReadCertificates(input_filename, k, vertex_colored, edge_colored, community_
     certificates = {}
 
     # keep track of the total subgraphs
+    total_time = 0
     total_subgraphs = 0
 
     with open(subgraphs_filename, 'r') as fd:
         # read all of the certificates and enumerated subgraphs
-        for certificate_info in fd:
+        for index, certificate_info in enumerate(fd):
             if certificate_info.startswith('Found'): continue
             elif certificate_info.startswith('Enumerated'):
                 total_subgraphs = int(certificate_info.split()[1])
@@ -43,6 +45,9 @@ def ReadCertificates(input_filename, k, vertex_colored, edge_colored, community_
                 nsubgraphs = int(certificate_info.split(':')[1].strip())
 
                 certificates[certificate] = nsubgraphs
+
+            # skip if the number of certificates is specified
+            if ncertificates > 0 and ncertificates == index: break
 
     # return the certificates and the number of subgraphs
     return certificates, total_subgraphs, total_time
@@ -74,7 +79,7 @@ def ReadSummaryStatistics(input_filename, k, vertex_colored, edge_colored, commu
             fd.seek(-2, os.SEEK_CUR)
 
         summary = fd.readline().decode()
-        
+
         subgraphs = int(summary.split()[1])
         total_time = float(summary.split()[-2])
 

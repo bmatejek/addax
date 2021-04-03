@@ -42,12 +42,12 @@ def EdgeColorComputationTimes():
 
             # determine if we need seconds, hours, or days
             if edge_colored_time < 3600:
-                sys.stdout.write('& \\SI{{{:0.2f}}}{{\\sec}}/\\SI{{{:0.2f}}}{{\\sec}} ({:0.0f}\\%) '.format(colorless_time, edge_colored_time, increased_time))
+                sys.stdout.write('& {:0.2f}/{:0.2f} sec ({:0.0f}\\%) '.format(colorless_time, edge_colored_time, increased_time))
             elif edge_colored_time < 86400:
-                sys.stdout.write('& \\SI{{{:0.2f}}}{{\\hour}}/\\SI{{{:0.2f}}}{{\\hour}} ({:0.0f}\\%) '.format(colorless_time / 3600, edge_colored_time / 3600, increased_time))
+                sys.stdout.write('& {:0.2f}/{:0.2f} hr ({:0.0f}\\%) '.format(colorless_time / 3600, edge_colored_time / 3600, increased_time))
             elif edge_colored_time < 31557600:
-                sys.stdout.write('& \\SI{{{:0.2f}}}{{\\day}}/\\SI{{{:0.2f}}}{{\\day}} ({:0.0f}\\%) '.format(colorless_time / 86400, edge_colored_time / 86400, increased_time))
+                sys.stdout.write('& {:0.2f}/{:0.2f} d ({:0.0f}\\%) '.format(colorless_time / 86400, edge_colored_time / 86400, increased_time))
             else:
-                sys.stdout.write('& \\SI{{{:0.2f}}}{{\\year}}/\\SI{{{:0.2f}}}{{\\year}} ({:0.0f}\\%) '.format(colorless_time / 31557600, edge_colored_time / 31557600, increased_time))
+                sys.stdout.write('& {:0.2f}/{:0.2f} yr ({:0.0f}\\%) '.format(colorless_time / 31557600, edge_colored_time / 31557600, increased_time))
 
         sys.stdout.write('\\\\\n')
