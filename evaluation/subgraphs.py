@@ -147,7 +147,7 @@ def PlotMotifs(filenames, legend, k, output_prefix):
     ax = fig.add_subplot()
 
     # set the preliminary information
-    ax.set_title('Proprtion of Subgraphs of Size {}'.format(k), fontsize=28)
+    ax.set_title('Proportion of Subgraphs of Size {}'.format(k), fontsize=28)
     ax.set_xlabel('Motif', fontsize=24)
     ax.set_ylabel('Proportion of Subgraphs', fontsize=24)
     ax.tick_params(axis='x', labelsize=0)
