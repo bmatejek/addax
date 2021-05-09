@@ -15,7 +15,7 @@ plt.style.use('seaborn')
 
 
 from addax.evaluation.complexity import PrintRunningTimeStatistics
-from addax.hemibrain.enumeration import MapVerticesToNeighborhoodSizes
+from addax.data_structures.enumeration import MapVerticesToNeighborhoodSizes
 
 
 
@@ -48,18 +48,22 @@ def ComputationalComplexityPerVertex(input_filename, graph, motif_size):
     # get the axis for this plot
     ax = fig.add_subplot(111)
 
-    ax.set_title('Running Time and No. Subgraphs', fontsize=24)
-    ax.set_xlabel('No. Subgraphs (Billions)', fontsize=20)
-    ax.set_ylabel('Running Time (seconds)', fontsize=20)
+    ax.set_title('Running Time and No. Subgraphs', fontsize=26)
+    ax.set_xlabel('No. Subgraphs (Billions)', fontsize=22)
+    ax.set_ylabel('Running Time (seconds)', fontsize=22)
+    ax.tick_params(axis='x', labelsize=18)
+    ax.tick_params(axis='y', labelsize=18)
 
-    ax.scatter(subgraphs_xy, running_times_y, color='#43908b', marker='o')
+    ax.scatter(subgraphs_xy, running_times_y, s = 100, color='#3d85c6', marker='o')
 
     # get the output filename and save
     output_directory = 'figures'
     if not os.path.exists(output_directory):
         os.makedirs(output_directory, exist_ok = True)
 
-    output_filename = '{}/{}-subgraphs-running-time.png'.format(output_directory, graph.prefix)
+    plt.tight_layout()
+
+    output_filename = '{}/{}-subgraphs-running-time.pdf'.format(output_directory, graph.prefix)
     fig.savefig(output_filename)
 
     # clear the figure
@@ -70,18 +74,23 @@ def ComputationalComplexityPerVertex(input_filename, graph, motif_size):
     # get the axis for this plot
     ax = fig.add_subplot(111)
 
-    ax.set_title('Neighborhood Size and No. Subgraphs', fontsize=24)
-    ax.set_xlabel('Neighborhood Size', fontsize=20)
-    ax.set_ylabel('No. Subgraphs(Billions)', fontsize=20)
+    ax.set_title('Neighborhood Size and No. Subgraphs', fontsize=26)
+    ax.set_xlabel('Neighborhood Size', fontsize=22)
+    ax.set_ylabel('No. Subgraphs(Billions)', fontsize=22)
+    ax.tick_params(axis='x', labelsize=18)
+    ax.tick_params(axis='y', labelsize=18)
 
-    ax.scatter(neighborhood_sizes_x, subgraphs_xy, color='#43908b', marker='o')
+
+    ax.scatter(neighborhood_sizes_x, subgraphs_xy, s = 100, color='#8e7cc3', marker='o')
 
     # get the output filename and save
     output_directory = 'figures'
     if not os.path.exists(output_directory):
         os.makedirs(output_directory, exist_ok = True)
 
-    output_filename = '{}/{}-subgraphs-neighborhood-size.png'.format(output_directory, graph.prefix)
+    plt.tight_layout()
+
+    output_filename = '{}/{}-subgraphs-neighborhood-size.pdf'.format(output_directory, graph.prefix)
     fig.savefig(output_filename)
 
     # clear the figure
