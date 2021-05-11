@@ -1,5 +1,7 @@
 import os
+import sys
 import glob
+import time
 
 
 
@@ -185,6 +187,10 @@ def CombineEnumeratedSubgraphs(input_filename, k, vertex_colored = False, edge_c
 
     # iterate over all the input files
     for input_filename in input_filenames:
+        start_time = time.time()
+        sys.stdout.write('Reading {}...'.format(input_filename))
+        sys.stdout.flush()
+
         # open the output file
         with open(input_filename, 'r') as fd:
             for certificate_line in fd:
@@ -210,6 +216,9 @@ def CombineEnumeratedSubgraphs(input_filename, k, vertex_colored = False, edge_c
                     certificate_mode = True
 
         assert (not certificate_mode)
+
+        sys.stdout.write('done in {:0.2f} seconds\n'.format(time.time() - start_time))
+        sys.stdout.flush()
 
     # all vertices are found
     assert (not len(vertices))
