@@ -198,11 +198,11 @@ def CombineEnumeratedSubgraphs(input_filename, k, vertex_colored = False, edge_c
 
                 # update the mode that currently exists
                 if segments[0] == 'Enumerated':
-                    nsubgraphs, vertex, time = int(segments[1]), int(segments[5]), float(segments[7])
+                    nsubgraphs, vertex, vertex_time = int(segments[1]), int(segments[5]), float(segments[7])
 
                     # update the counter variables that verify correctness
                     total_nsubgraphs += nsubgraphs
-                    total_time += time
+                    total_time += vertex_time
                     vertices.remove(vertex)
 
                     certificate_mode = False
