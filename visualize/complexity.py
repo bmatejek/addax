@@ -11,6 +11,7 @@ import numpy as np
 
 
 plt.style.use('seaborn')
+plt.rcParams['font.family'] = 'monospace'
 
 
 
@@ -63,8 +64,8 @@ def ComputationalComplexityPerVertex(input_filename, graph, motif_size):
 
     plt.tight_layout()
 
-    output_filename = '{}/{}-subgraphs-running-time.pdf'.format(output_directory, graph.prefix)
-    fig.savefig(output_filename)
+    output_filename = '{}/{}-subgraphs-running-time.png'.format(output_directory, graph.prefix)
+    plt.savefig(output_filename)
 
     # clear the figure
     plt.clf()
@@ -90,8 +91,35 @@ def ComputationalComplexityPerVertex(input_filename, graph, motif_size):
 
     plt.tight_layout()
 
-    output_filename = '{}/{}-subgraphs-neighborhood-size.pdf'.format(output_directory, graph.prefix)
-    fig.savefig(output_filename)
+    output_filename = '{}/{}-subgraphs-neighborhood-size.png'.format(output_directory, graph.prefix)
+    plt.savefig(output_filename)
+
+    # clear the figure
+    plt.clf()
+
+     # plot the two charts
+    fig = plt.figure(figsize=(8, 5))
+    # get the axis for this plot
+    ax = fig.add_subplot(111)
+
+    ax.set_title('Neighborhood Size and Running Time', fontsize=26)
+    ax.set_xlabel('Neighborhood Size', fontsize=22)
+    ax.set_ylabel('Running Time (seconds)', fontsize=22)
+    ax.tick_params(axis='x', labelsize=18)
+    ax.tick_params(axis='y', labelsize=18)
+
+
+    ax.scatter(neighborhood_sizes_x, running_times_y, s = 100, color='#8e7cc3', marker='o')
+
+    # get the output filename and save
+    output_directory = 'figures'
+    if not os.path.exists(output_directory):
+        os.makedirs(output_directory, exist_ok = True)
+
+    plt.tight_layout()
+
+    output_filename = '{}/{}-neighborhood-size-time.png'.format(output_directory, graph.prefix)
+    plt.savefig(output_filename)
 
     # clear the figure
     plt.clf()
