@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 
 
 plt.style.use('seaborn')
-
+plt.rcParams['font.family'] = 'Ubuntu'
 
 
 from addax.analysis.certificates import ReadCertificates, ReadSummaryStatistics
@@ -27,72 +27,114 @@ def FindFrequentMotifs():
     Find the top ten most frequent motifs for all of the datasets and draw them
     """
     # the datasets
-    input_filenames = [
-        'graphs/hemi-brain-minimum.graph.bz2',
-        'graphs/C-elegans-timelapsed-01-minimum.graph.bz2',
-        'graphs/C-elegans-timelapsed-02-minimum.graph.bz2',
-        'graphs/C-elegans-timelapsed-03-minimum.graph.bz2',
-        'graphs/C-elegans-timelapsed-04-minimum.graph.bz2',
-        'graphs/C-elegans-timelapsed-05-minimum.graph.bz2',
-        'graphs/C-elegans-timelapsed-06-minimum.graph.bz2',
-        'graphs/C-elegans-timelapsed-07-minimum.graph.bz2',
-        'graphs/C-elegans-timelapsed-08-minimum.graph.bz2',
-        'graphs/C-elegans-sex-male-minimum.graph.bz2',
-        'graphs/C-elegans-sex-hermaphrodite-minimum.graph.bz2',
-    ]
+    datasets = {
+        'hemi-brain': [
+            'graphs/hemi-brain-minimum.graph.bz2',
+        ],
+        'C-elegans-timelapsed': [
+            'graphs/C-elegans-timelapsed-01-minimum.graph.bz2',
+            'graphs/C-elegans-timelapsed-02-minimum.graph.bz2',
+            'graphs/C-elegans-timelapsed-03-minimum.graph.bz2',
+            'graphs/C-elegans-timelapsed-04-minimum.graph.bz2',
+            'graphs/C-elegans-timelapsed-05-minimum.graph.bz2',
+            'graphs/C-elegans-timelapsed-06-minimum.graph.bz2',
+            'graphs/C-elegans-timelapsed-07-minimum.graph.bz2',
+            'graphs/C-elegans-timelapsed-08-minimum.graph.bz2',
+        ],
+        'C-elegans-sex': [
+            'graphs/C-elegans-sex-male-minimum.graph.bz2',
+            'graphs/C-elegans-sex-hermaphrodite-minimum.graph.bz2',
+        ],
+    }
 
     # the number of motifs to consider per dataset
     nmotifs = 5
 
-    # go through each dataset and get the top ten most frequent motifs
-    for input_filename in input_filenames:
-        graph = ReadGraph(input_filename, vertices_only = True)
+    # assumes only 8 different motifs (works for datasets described)
+    colors = [
+        '#6aa84f',
+        '#6fa8dc',
+        '#0a5394',
+        '#c27ba1',
+        '#8e7cc3',
+        '#38761d',
+        '#e69138',
+        '#e69138',
+    ]
+
+    # go through each of the datasets
+    for dataset, input_filenames in datasets.items():
+        print (dataset)
+        certificates_per_dataset = {}
+
+        # go through each input filename
+        for input_filename in input_filenames:
+            graph = ReadGraph(input_filename, vertices_only = True)
+
+            # create the output directory if it doesn't exist 
+            output_directory = 'figures/{}'.format(graph.prefix)
+            if not os.path.exists(output_directory):
+                os.makedirs(output_directory, exist_ok = True)
+
+            certificates_per_dataset[input_filename] = {}
+
+            # only consider k values of 4 and 5 
+            for k in [4, 5]:
+                # no colors or community based
+                certificates, _, _ = ReadCertificates(input_filename, k, False, False, False, nmotifs)
+
+                certificates_per_dataset[input_filename][k] = certificates
 
         # only consider k values of 4 and 5
         for k in [4, 5]:
-            # no colors or community based
-            nsubgraphs, _ = ReadSummaryStatistics(input_filename, k, False, False, False)
-            certificates, _, _ = ReadCertificates(input_filename, k, False, False, False, 5)
+        
+            # count the number of unique certificates of size k
+            certificate_to_color = {}
+        
+            for input_filename in certificates_per_dataset.keys():
+                # count the number of unique certificates 
+                for certificate, _ in certificates_per_dataset[input_filename][k].items():
+                    if not certificate in certificate_to_color:
+                        certificate_to_color[certificate] = colors[len(certificate_to_color)]
+            print ('{} {} - {}'.format(dataset, k, len(certificate_to_color)))
+            
+            # go through each input filename and save the motifs 
+            for input_filename in certificates_per_dataset.keys():
+                graph = ReadGraph(input_filename, vertices_only = True)
 
-            # create a new figure with two rows of 5
-            fig, ax = plt.subplots(1, 5)
+                certificates = certificates_per_dataset[input_filename][k]
 
-            ratio = 3
-            fig.set_figheight(1.25 * ratio)
-            fig.set_figwidth(5 * ratio)
+                # create a new figure with one row of nmotifs 
+                fig, ax = plt.subplots(1, nmotifs)
 
-            for iv, (certificate, subgraphs) in enumerate(sorted(certificates.items(), key = lambda x: x[1], reverse = True)):
-                # vertex and edges are not colored, graph is directed
-                nx_graph = ParseCertificate(k, certificate, False, False, True)
+                ratio = 3
+                fig.set_figheight(ratio)
+                fig.set_figwidth(nmotifs * ratio)
 
-                # get the position for networkx
-                pos = nx.circular_layout(nx_graph)
+                for iv, (certificate, _) in enumerate(sorted(certificates.items(), key = lambda x: x[1], reverse = True)):
+                    # vertex and edges are not colored, graph is directed 
+                    nx_graph = ParseCertificate(k, certificate, False, False, True)
 
-                row = iv // 5
-                col = iv % 5
+                    # get the position for networkx 
+                    pos = nx.circular_layout(nx_graph)
 
-                # draw the network to matplotlib
-                nx.draw_networkx_nodes(nx_graph, pos, ax=ax[col], node_size = 800, linewidths=2, node_shape = 'o', node_color='#e06666')
-                nx.draw_networkx_edges(nx_graph, pos, ax=ax[col], edge_color = 'black', arrowsize=50, width=3)#, min_source_margin=-1000, min_target_margin=-1000)
+                    # draw the network to matplotlib 
+                    nx.draw_networkx_nodes(nx_graph, pos, ax = ax[iv], node_size = 800, linewidths = 2, node_shape = 'o', node_color = certificate_to_color[certificate])
+                    nx.draw_networkx_edges(nx_graph, pos, ax = ax[iv], edge_color = 'black', arrowsize = 50, width = 3)
 
-                ax[col].set_title('{:0.2f}%'.format(100 * subgraphs / nsubgraphs), fontsize=42)
-                ax[col].axis('off')
+                    ax[iv].axis('off')
 
-                # draw a boundary around the nodes
-                ax[col].collections[0].set_edgecolor('#666666')
+                    # draw a boundary around the nodes 
+                    ax[iv].collections[0].set_edgecolor('#666666')
 
+                output_directory = 'figures/{}'.format(graph.prefix)
+                output_filename = '{}/motifs-{:03d}.png'.format(output_directory, k)
 
-            # create the output directory if it doesn't exist
-            output_directory = 'figures/{}'.format(graph.prefix, k)
-            if not os.path.exists(output_directory):
-                os.makedirs(output_directory, exist_ok = True)
-            output_filename = '{}//motifs-{:03d}.png'.format(output_directory, k)
+                plt.tight_layout()
 
-            plt.tight_layout()
+                plt.savefig(output_filename)
 
-            plt.savefig(output_filename)
-            plt.clf()
-
+                plt.close()
 
 
 def CountDatasetStatistics():
